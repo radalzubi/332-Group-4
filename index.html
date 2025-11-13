@@ -1,0 +1,220 @@
+<?php
+session_start();
+
+// Decide what "page" we're on
+$page = $_GET['page'] ?? 'login';
+
+// Handle login form submit
+if ($page === 'do_login') {
+    $username = trim($_POST['username'] ?? '');
+    $password = trim($_POST['password'] ?? '');
+
+    // Missing username or password
+    if ($username === '' || $password === '') {
+        header('Location: index.php?page=login&error=empty');
+        exit();
+    }
+
+    // DEMO LOGINS (later: replace with SQL / real DB)
+    if ($username === 'manager' && $password === '123') {
+        $_SESSION['role'] = 'senior';
+        header('Location: index.php?page=erp');
+        exit();
+    }
+
+    if ($username === 'supply' && $password === '123') {
+        $_SESSION['role'] = 'scm';
+        header('Location: index.php?page=scm');
+        exit();
+    }
+
+    // Anything else is invalid
+    header('Location: index.php?page=login&error=invalid');
+    exit();
+}
+
+// Handle logout
+if ($page === 'logout') {
+    session_unset();
+    session_destroy();
+    header('Location: index.php?page=login');
+    exit();
+}
+
+$role = $_SESSION['role'] ?? null;
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IE 332 ERP</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body class="app-body">
+<div class="app-shell">
+
+<?php if ($page === 'login'): ?>
+
+    <!-- LOGIN PAGE -->
+    <div class="card" id="login-card">
+        <header class="card-header">
+            <h1 class="app-title">Group ERP Portal</h1>
+            <p class="app-subtitle">Sign in to access your dashboard</p>
+        </header>
+
+        <section class="members-row">
+            <div class="member">
+                <img src="member1.jpg" alt="Member 1" class="pfp">
+                <span>Member 1 Name</span>
+            </div>
+            <div class="member">
+                <img src="member2.jpg" alt="Member 2" class="pfp">
+                <span>Member 2 Name</span>
+            </div>
+            <div class="member">
+                <img src="member3.jpg" alt="Member 3" class="pfp">
+                <span>Member 3 Name</span>
+            </div>
+            <!-- add/remove members as needed -->
+        </section>
+
+        <!-- server-side error (from PHP) -->
+        <div id="serverError" class="error-msg">
+            <?php
+            if (isset($_GET['error'])) {
+                if ($_GET['error'] === 'empty') {
+                    echo 'Please enter both username and password.';
+                } elseif ($_GET['error'] === 'invalid') {
+                    echo 'Invalid username or password.';
+                }
+            }
+            ?>
+        </div>
+
+        <!-- client-side error (from JS) -->
+        <p id="clientError" class="error-msg hidden"></p>
+
+        <form id="login-form" class="form" action="index.php?page=do_login" method="POST">
+            <div class="form-field">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    placeholder="e.g. manager"
+                    autocomplete="username"
+                >
+            </div>
+
+            <div class="form-field">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Your password"
+                    autocomplete="current-password"
+                >
+            </div>
+
+            <button type="submit" class="btn-primary">Login</button>
+
+            <p class="hint">
+                Demo logins: <code>manager / 123</code> (Senior) • <code>supply / 123</code> (SCM)
+            </p>
+        </form>
+    </div>
+
+<?php elseif ($page === 'erp' && $role === 'senior'): ?>
+
+    <!-- SENIOR MANAGER DASHBOARD -->
+    <div class="card wide">
+        <header class="card-header horizontal">
+            <div>
+                <h1 class="app-title">Senior Manager Dashboard</h1>
+                <p class="app-subtitle">
+                    High-level financials, disruptions, and network health (placeholders).
+                </p>
+            </div>
+            <nav class="top-nav">
+                <a href="index.php?page=erp" class="nav-link active">Overview</a>
+                <a href="#" class="nav-link">Financials</a>
+                <a href="#" class="nav-link">Disruptions</a>
+                <a href="index.php?page=logout" class="nav-link logout">Logout</a>
+            </nav>
+        </header>
+
+        <section class="grid">
+            <div class="panel">
+                <h2>Financial Health</h2>
+                <p>Later: SQL + chart of average financial health by company (date filters).</p>
+            </div>
+            <div class="panel">
+                <h2>Regional Disruptions</h2>
+                <p>Later: disruptions per region (total & high impact), shown as heatmap or bars.</p>
+            </div>
+            <div class="panel">
+                <h2>Critical Companies</h2>
+                <p>Later: sorted list by <code>Criticality = #Downstream × HighImpactCount</code>.</p>
+            </div>
+            <div class="panel">
+                <h2>Disruption Frequency Over Time</h2>
+                <p>Later: line chart of disruptions over time with user-defined window.</p>
+            </div>
+        </section>
+    </div>
+
+<?php elseif ($page === 'scm' && $role === 'scm'): ?>
+
+    <!-- SUPPLY CHAIN MANAGER DASHBOARD -->
+    <div class="card wide">
+        <header class="card-header horizontal">
+            <div>
+                <h1 class="app-title">Supply Chain Manager Dashboard</h1>
+                <p class="app-subtitle">
+                    Company info, transactions, KPIs, and disruption metrics (placeholders).
+                </p>
+            </div>
+            <nav class="top-nav">
+                <a href="index.php?page=scm" class="nav-link active">Overview</a>
+                <a href="#" class="nav-link">Companies</a>
+                <a href="#" class="nav-link">Transactions</a>
+                <a href="index.php?page=logout" class="nav-link logout">Logout</a>
+            </nav>
+        </header>
+
+        <section class="grid">
+            <div class="panel">
+                <h2>Company Info</h2>
+                <p>Later: search by company name and load details from database.</p>
+            </div>
+            <div class="panel">
+                <h2>Key KPIs</h2>
+                <p>Later: on-time delivery, delay stats, financial trends, disruption counts.</p>
+            </div>
+            <div class="panel">
+                <h2>Disruption Metrics</h2>
+                <p>Later: DF, ART, HDR, TD, RRC, DSD computed with SQL and plotted.</p>
+            </div>
+            <div class="panel">
+                <h2>Alerts</h2>
+                <p>Later: color-coded alerts for new/ongoing disruptions.</p>
+            </div>
+        </section>
+    </div>
+
+<?php else: ?>
+
+    <!-- FALLBACK -->
+    <div class="card">
+        <h1 class="app-title">Session expired or unauthorized</h1>
+        <p class="app-subtitle">Please log in again.</p>
+        <a href="index.php?page=login" class="btn-primary">Back to login</a>
+    </div>
+
+<?php endif; ?>
+
+</div>
+</body>
+</html>
