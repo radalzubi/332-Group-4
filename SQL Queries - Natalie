@@ -32,6 +32,26 @@ BEGIN
     FIELD(f.Quarter, 'Q4', 'Q3', 'Q2', 'Q1') DESC -- starting most recent (latest) quarter
   LIMIT 1;
 
+  SELECT -- capacity (if manufacturer)
+    c.CompanyName,
+    m.CompanyID,
+    m.FactoryCapacity
+  FROM Manufacturer m
+  JOIN Company ON c.CompanyID = m.CompanyID
+  WHERE c.CompanyName = userEnteredName;
+
+  SELECT -- unique routes (if distributor) 
+    c.CompanyName,
+    d.CompanyID, -- Distributor table only contains IDs corresponding to companyIDs in full Company table that belong to distributors
+    DISTINCT o.FromCompanyID, -- The pairing of From Company ID &
+    o.ToCompanyID, -- ToCompanyID needs to be distinct in order for the route to be unique
+  FROM Distributor d
+  JOIN Company c ON c.CompanyID = d.CompanyID
+  LEFT JOIN OperatesLogistics o ON o.DistributorID = d.CompanyID
+  WHERE c.CompanyName = userEnteredName
+
+  SELECT -- which products they supply
+
   
 
     
