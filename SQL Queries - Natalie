@@ -1,0 +1,37 @@
+DELIMITER //
+
+CREATE PROCEDURE CompanyInfoSearch( -- Company Info
+  IN UserEnteredName VARCHAR(100), -- searchable by name
+  IN UserStartDate DATE DEFAULT NULL, -- needed for date range for transactions
+  IN UserEndDate DATE EFAULT NULL, -- needed for date range for transaction
+)
+BEGIN
+  SELECT c.*, -- all columns in Company since either listed in A3 requirements (Location ID for address, Tier Level, and Company Type) or justifiable as important information (Company ID)
+
+
+
+
+
+
+
+
+
+
+
+-- SCRATCH AREA -- 
+
+CREATE PROCEDURE CompanyInfoSearch( -- Company Info 
+  IN UserEnteredName VARCHAR(100), -- searchable by name
+  IN UserStartDate DATE DEFAULT NULL, -- included in A3 requirements (date range)
+  IN UserEndDate DATE DEFAULT NULL, -- included in A3 requirements (date range)
+  IN UserLocationID INT(5) DEFAULT NULL, -- included in A3 requirements (locationID)
+  IN UserTransactionID, -- included in A3 requirements (orderID)
+  IN UserProductID INT(10) -- bonus (etc. from A3 requirements)
+  IN UserProductCategory ENUM('Electronics', 'Raw Material', 'Component', 'Finished Good', 'Other') DEFAULT NULL -- bonus (etc. from A3 requirements)
+  IN UserTransactionType ENUM('Shipping', 'Receiving', 'Adjustment') DEFAULT NULL -- bonus (etc. from A3 requirements)
+  IN User 
+  
+SELECT 
+  c.*, -- CompanyID, CompanyName, LocationID, TierLevel, Type
+  
+WHERE CompanyName LIKE CONCAT('%', EnteredName, '%');
