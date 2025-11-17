@@ -1,12 +1,40 @@
 DELIMITER //
 
 CREATE PROCEDURE CompanyInfoSearch( -- Company Info
-  IN UserEnteredName VARCHAR(100), -- searchable by name
-  IN UserStartDate DATE DEFAULT NULL, -- needed for date range for transactions
-  IN UserEndDate DATE EFAULT NULL, -- needed for date range for transaction
+  IN userEnteredName VARCHAR(100), -- searchable by name
+  IN userStartDate DATE DEFAULT NULL, -- needed for date range for transactions
+  IN userEndDate DATE EFAULT NULL, -- needed for date range for transaction
 )
 BEGIN
-  SELECT c.*, -- all columns in Company since either listed in A3 requirements (Location ID for address, Tier Level, and Company Type) or justifiable as important information (Company ID)
+
+  SELECT c.* -- all columns in Company since either listed in A3 requirements (Location ID for address, Tier Level, and Company Type) or justifiable as important information (Company ID)
+  FROM Company c
+  WHERE c.Name = userEnteredName;
+
+  SELECT
+    c.CompanyID,
+    depUp.CompanyID,
+    depUp.Name,
+    depDown.CompanyID,
+    depDown.Name
+  FROM Company C
+  LEFT JOIN DependsOn d1 ON c.CompanyID = d1.DownstreamCompanyID -- all results from DependsOn table (d1 link table version) to corresponding company IDs where searched company is downstream (searched depends on said companies)
+  LEFT JOIN Company depUp ON d1.UpstreamCompanyID = depUp.CompanyID -- all results from Company depUp and their corresponding IDs paired with searched company ID downstream of them
+  LEFT JOIN DependsOn d2 ON c.CompanyID - d2.UpstreamCompanyID -- all results from DependsOn link table d2 to corresponding company IDs where searched company is upstream (said companies depend on searched)
+  LEFT JOIN Company depDown ON d2.DownstreamCompanyID = depDown.CompanyID -- all reuslts from Company depDown and their corresponding IDs paired with searched company ID upstream of them
+  WHERE c.Name - userEnteredName;
+
+  SELECT f.* -- assumption that "most recent financial status" must include all FinancialReport data (Quarter, RepYear, HealthScore)
+  FROM FinancialReport f
+  JOIN Company C ON f.CompanyID = c.CompanyID
+  WHERE c.Name = userEnteredName
+  ORDER BY (f.RepYear DESC, -- starting most recent (latest) year
+    FIELD(f.Quarter, 'Q4', 'Q3', 'Q2', 'Q1') DESC -- starting most recent (latest) quarter
+  LIMIT 1;
+
+  
+
+    
 
 
 
