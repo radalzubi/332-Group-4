@@ -11,7 +11,7 @@ BEGIN
   FROM Company c
   WHERE c.Name = userEnteredName;
 
-  SELECT
+  SELECT -- who they depend on, and who depends on them
     c.CompanyID,
     depUp.CompanyID,
     depUp.Name,
@@ -33,7 +33,6 @@ BEGIN
   LIMIT 1;
 
   SELECT -- capacity (if manufacturer)
-    c.CompanyName,
     m.CompanyID,
     m.FactoryCapacity
   FROM Manufacturer m
@@ -41,18 +40,39 @@ BEGIN
   WHERE c.CompanyName = userEnteredName;
 
   SELECT -- unique routes (if distributor) 
-    c.CompanyName,
     d.CompanyID, -- Distributor table only contains IDs corresponding to companyIDs in full Company table that belong to distributors
     DISTINCT o.FromCompanyID, -- The pairing of From Company ID &
     o.ToCompanyID, -- ToCompanyID needs to be distinct in order for the route to be unique
   FROM Distributor d
   JOIN Company c ON c.CompanyID = d.CompanyID
   LEFT JOIN OperatesLogistics o ON o.DistributorID = d.CompanyID
-  WHERE c.CompanyName = userEnteredName
+  WHERE c.CompanyName = userEnteredName;
 
-  SELECT -- which products they supply
+  SELECT -- which products they supply (assumption that product price is important info to be included)
+    p.ProductID,
+    p.ProductName,
+    sp.SupplyPrice
+  FROM SuppliesProduct sp
+  JOIN Product p ON sp.ProductID = p.ProductID
+  JOIN Company c ON sp.SupplierID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName;
 
-  
+  SELECT -- the diversity of products (from Piazza "A3 - Supply Chain Manager Module - Diversity of Products Clarification" taken to mean diversity between product categories)
+    p.Category,
+    COUNT(p.ProductID) AS TotalProductNumber,
+    COUNT(p.ProductID) * 100.00 / (
+      SELECT COUNT(*)
+      FROM SuppliesProduct supr
+      JOIN Product pr ON supr.ProductID = pr.ProductID
+      WHERE supr.SupplierID = c.CompanyID
+    ) AS PercentOfTotalProducts
+  FROM SuppliesProduct sp
+  JOIN Product p ON sp.ProductID = p.ProductID
+  JOIN Company c ON sp.SupplierID = c.CompanyID
+  WHERE c.CompanyName - userEnteredName
+  GROUP BY p.Category;
+
+  SELECT -- list of transactions
 
     
 
