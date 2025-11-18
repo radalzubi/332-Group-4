@@ -59,21 +59,65 @@ BEGIN
 
   SELECT -- the diversity of products (from Piazza "A3 - Supply Chain Manager Module - Diversity of Products Clarification" taken to mean diversity between product categories)
     p.Category,
-    COUNT(p.ProductID) AS TotalProductNumber,
-    COUNT(p.ProductID) * 100.00 / (
+    COUNT(p.ProductID) AS TotalProductNumber, -- total quantity of all products
+    COUNT(p.ProductID) * 100.00 / ( -- percentage
       SELECT COUNT(*)
       FROM SuppliesProduct supr
-      JOIN Product pr ON supr.ProductID = pr.ProductID
-      WHERE supr.SupplierID = c.CompanyID
-    ) AS PercentOfTotalProducts
+      WHERE supr.SupplierID = c.CompanyID -- of specific product
+    ) AS PercentOfTotalProducts -- individual product percentage out of all products
   FROM SuppliesProduct sp
   JOIN Product p ON sp.ProductID = p.ProductID
   JOIN Company c ON sp.SupplierID = c.CompanyID
   WHERE c.CompanyName - userEnteredName
-  GROUP BY p.Category;
+  GROUP BY p.Category; -- category percentage out of all products
 
-  SELECT -- list of transactions
+  SELECT -- shipping transactions (within date range)
+    t.TransactionID AS OrderID,
+    'Shipping' AS TransactionType, -- where a product is shipped to or shipped from a company (due to nature of the Shipping table)
+    s.SourceCompanyID, -- can be target company
+    s.DestinationCompanyID, -- can be target company
+    s.Quantity,
+    s.ActualDate AS TransactionDate, -- using actual shipped not promised
+    p.ProductName
+  FROM Inventory Transaction t
+  JOIN Shipping s on t.TransactionID = s.TransactionID
+  JOIN Product p on s.ProductID = p.ProductID
+  JOIN Company c ON (s.SourceCompanyID = c.CompanyID OR s.DesinationCompanyID = c.CompanyID) -- shows both shipped from (source company) and shipped to (destination company) transactions attached to search company
+  WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all shipments if no date range specified, lists shipments between date ends if specified
+  ORDER BY s.ActualDatel; -- chronological order from most recent
 
+  SELECT -- receiving transaction (within date range)
+    t.TransactionID AS OrderID,
+    'Receiving' AS TransactionType, -- where a product is received by a company (due to nature of Receiving table) 
+    r.ReceivedDate AS TransactionDate,
+    r.QuantityReceived AS Quantity,
+    r.ReceiverCompanyID AS DestinationCompanyID, -- target company, kept naming for convention with shipping transactions
+    s.SourceCompanyID, -- included in transaction description
+    p.ProductName
+  FROM Inventory Transaction t
+  JOIN Receiving r ON t.TransactionID = r.TransactionID -- 
+  JOIN Shipping s ON r.ShipmentID = s.ShipmentID -- to display source company (not the target company) of the product
+  JOIN Product p ON s.ProductID = p.ProductID
+  JOIN Company c ON r.ReceiverCompanyID = c.CompanyID
+  WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all transactions if no date range specified, lists transactions between date ends if specified
+  ORDER BY r.ReceivedDate; -- chronological order from most recent
+
+  SELECT -- adjustment transactions (within date range)
+    t.TransactionID AS OrderID,
+    'Adjustment' AS TransactionType,
+    a.AdjustmentDate AS TransactionDate,
+    a.QuantityChange AS Quantity,
+    a.CompanyID AS SourceCompanyID, -- target company, kept naming for convention with shipping (and receiving) transactions
+    a.CompanyID AS DestinationCompanyID, -- target company, same as above
+    p.ProductName,
+    a.Reason
+  FROM InventoryTransaction t
+  JOIN InventoryAdjustment a ON t.TransactionID = a.TransactionID
+  JOIN Product p ON a.ProductID = p.ProductID
+  JOIN Company c ON a.CompanyID = c.CompanyID -- merges source/destination since adjustments all internal
+  WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all adjustments if no date range specified, lists adjustments between date ends if specified
+ORDER BY a.AdjustmentDate; -- chronological order from most recent
+    
     
 
 
