@@ -8,7 +8,7 @@ DELIMITER //
 CREATE PROCEDURE CompanyInfoSearch( -- Company Info
   IN userEnteredName VARCHAR(100), -- searchable by name
   IN userStartDate DATE DEFAULT NULL, -- needed for date range for transactions
-  IN userEndDate DATE EFAULT NULL, -- needed for date range for transaction
+  IN userEndDate DATE DEFAULT NULL -- needed for date range for transaction
 )
 BEGIN
 
@@ -194,8 +194,53 @@ ORDER BY a.AdjustmentDate; -- chronological order from most recent
 -- DISRUPTION EVENTS contains DF, ART, HDR, TD, RRC, DSD --
   -- one mandatory input of company, region, and/or tier, over a period of time (optional range, full history if not)--
 
-CREATE PROCEDURE DisruptionEventsDisplay
+CREATE PROCEDURE DisruptionEventsDisplay(
+  IN userEnteredName VARCHAR(100) DEFAULT NULL,
+  IN userEnteredRegion VARCHAR(50) DEFAULT NULL, 
+  IN userEnteredTier ENUM('1','2','3') DEFAULT NULL,
+  IN userStartDate DATE DEFAULT NULL, 
+  IN userEndDate DATE DEFAULT NULL, 
+)
+BEGIN
 
+  SELECT
+    dc.CategoryName, 
+    COUNT(de.EventID) AS EventCount
+  FROM DisruptionCategory dc
+  LEFT JOIN DisruptionEvent de ON dc.CategoryID = de.CategoryID
+  AND (userStartDate IS NULL OR userEndDate IS NULL OR de.EventDate BETWEEN userStartDate AND userEndDate)
+  LEFT JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+  LEFT JOIN Company c ON ic.AffectedCompanyID = c.CompanyID ON ic.AffectedCompanyID = c.CompanyID
+  LEFT JOIN Location l ON c.LocationID - l.LocationID
+  WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
+    AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion)
+    AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
+  GROUP BY dc.CategoryName
+  ORDER BY EventCount DESC;
+
+  SELECT
+    c.CompanyName,
+    c.CompanyID,
+    c.TierLevel,
+    l.LocationID,
+    l.ContinentName,
+    dc.CategoryName,
+    dc.Description,
+    de.EventID,
+    de.EventDate,
+    de.EventRecoveryDate,
+    ic.ImpactLevel
+  FROM DisruptionEvent de
+  JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
+  JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+  JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+  JOIN Location l ON c.LocationID = l.LocationID
+   WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
+    AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion)
+    AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
+  ORDER BY de.EventDate DESC;
+
+END //
 
 
 
