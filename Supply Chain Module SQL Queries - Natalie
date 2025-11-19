@@ -131,7 +131,7 @@ BEGIN
   JOIN Product p ON a.ProductID = p.ProductID
   JOIN Company c ON a.CompanyID = c.CompanyID -- merges source/destination since adjustments all internal
   WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all adjustments if no date range specified, lists adjustments between date ends if specified
-ORDER BY a.AdjustmentDate; -- chronological order from most recent
+  ORDER BY a.AdjustmentDate; -- chronological order from most recent
 
 
 -- Key Performance Indicators (subcategory of COMPANY SEARCH)-- 
@@ -191,6 +191,8 @@ ORDER BY a.AdjustmentDate; -- chronological order from most recent
 
 
 
+
+
 -- DISRUPTION EVENTS contains DF, ART, HDR, TD, RRC, DSD --
   -- one mandatory input of company, region, and/or tier, over a period of time (optional range, full history if not)--
 
@@ -213,9 +215,7 @@ BEGIN
   LEFT JOIN ImpactsCompany ic ON de.EventID = ic.EventID
   LEFT JOIN Company c ON ic.AffectedCompanyID = c.CompanyID ON ic.AffectedCompanyID = c.CompanyID
   LEFT JOIN Location l ON c.LocationID - l.LocationID
-  WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
-    AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion)
-    AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
+  WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName) AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion) AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
   GROUP BY dc.CategoryName
   ORDER BY EventCount DESC;
 
@@ -236,9 +236,7 @@ BEGIN
   JOIN ImpactsCompany ic ON de.EventID = ic.EventID
   JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
   JOIN Location l ON c.LocationID = l.LocationID
-   WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
-    AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion) -- paired by re
-    AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier) -- paired by tier if provided
+  WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName) AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion) AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier) -- paired by tier if provided
   ORDER BY de.EventDate DESC;
 
   -- Disruption Frequency (DF) -- 
@@ -263,17 +261,20 @@ BEGIN
       c.CompanyName,
       c.CompanyID,  
       de.EventID,
-      de.EventDate
+      de.EventDate,
+      l.ContinentName AS Region,
+      ic.ImpactLevel
     FROM DisruptionEvent de
     JOIN ImpactsCompany ic ON de.EventID = ic.EventID
     JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
     JOIN Location l ON c.LocationID = l.LocationID
     JOIN dateRange dr
-    WHERE de.EventDate BETWEEN dr.disruptionStartDate AND dr.disruptionEndDate
-      AND (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
-      AND (userEnteredRegion IS NULL OR l.ContinentName = userEnteredRegion)
-      AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
+    WHERE de.EventDate BETWEEN dr.disruptionStartDate AND dr.disruptionEndDate AND (userEnteredName IS NULL OR c.CompanyName = userEnteredName) AND (userEnteredRegion IS NULL OR l.ContinentName = userEnteredRegion) AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
   )  
+
+  totalDisruptions AS ( -- new examined total of disruptions within the date range
+    SELECT COUNT(*) AS total_disruptions FROM disruptionsInRange
+  )
 
   quartersInRange AS ( -- calculates number of quarters and stores said quarters within the time range (since specific date dependent for resultant number of quarters)
       SELECT 
@@ -282,46 +283,105 @@ BEGIN
       FROM dateRange dr
       UNION ALL
       SELECT 
-        CONCAT(YEAR(DATE_ADD(QuarterStart, INTERVAL 3 MONTH)),
-               '-Q',
-               QUARTER(DATE_ADD(QuarterStart, INTERVAL 3 MONTH))) AS QuarterLabel,
+        CONCAT(YEAR(DATE_ADD(QuarterStart, INTERVAL 3 MONTH)), -- 3 month interval breaks down to Jan 1 - Mar 31 ... etc.
+          '-Q',
+          QUARTER(DATE_ADD(QuarterStart, INTERVAL 3 MONTH))) AS QuarterLabel, 
         DATE_ADD(QuarterStart, INTERVAL 3 MONTH)
       FROM quartersInRange
       JOIN dateRange dr
       WHERE DATE_ADD(QuarterStart, INTERVAL 3 MONTH) <= dr.disruptionEndDate
   ),
 
-quarterlyCounts AS (
+  quarterlyCounts AS ( -- all disruptions per company for all quarters
     SELECT
-        q.QuarterLabel,
-        d.CompanyID,
-        d.CompanyName,
-        COUNT(d.EventID) AS disruptionsThisQuarter
+      q.QuarterLabel,
+      d.CompanyID,
+      d.CompanyName,
+      COUNT(d.EventID) AS disruptionsThisQuarter
     FROM quarterSpan q
-    LEFT JOIN disruptionsInRange d
-      ON QUARTER(d.EventDate) = SUBSTRING(q.QuarterLabel, 7, 1)
-     AND YEAR(d.EventDate) = SUBSTRING(q.QuarterLabel, 1, 4)
+    LEFT JOIN disruptionsInRange d ON QUARTER(d.EventDate) = SUBSTRING(q.QuarterLabel, 7, 1) AND YEAR(d.EventDate) = SUBSTRING(q.QuarterLabel, 1, 4)
     GROUP BY q.QuarterLabel, d.CompanyID, d.CompanyName
-),
+  ),
 
--- Compute final DF by company
-frequency AS (
+  -- Disruption Frequency (DF) --
+
+  frequency AS ( -- disruption frequency
     SELECT
-        CompanyID,
-        CompanyName,
-        SUM(disruptionsThisQuarter) AS Ndisruptions,
-        COUNT(*) AS T_quarters,
-        SUM(disruptionsThisQuarter) / COUNT(*) AS DF
+      CompanyID,
+      CompanyName,
+      SUM(disruptionsThisQuarter) AS Ndisruptions, -- total disruptions
+      COUNT(*) AS T_quarters, -- total quarters
+      SUM(disruptionsThisQuarter) / COUNT(*) AS DF -- disruption frequency
     FROM quarterlyCounts
     GROUP BY CompanyID, CompanyName
-)
+  )
+  SELECT * FROM frequency
+  ORDER BY DF DESC;
 
-SELECT * FROM frequency
-ORDER BY DF DESC;
 
-  
+  -- Average Recovery Time (ART) --
+
+  SELECT -- average time between event date (start) and event recovery date for disruption events
+    CompanyName,
+    CompanyID,
+    ContinentName AS Region,
+    COUNT(de.EventID) AS Ndisruptions,
+    AVG(DATEDIFF(EventRecoveryDate, EventDate)) AS ART -- average recovery  time (in days)
+  FROM disruptionsInRange
+  GROUP BY CompanyID, CompanyName, Region
+  ORDER BY ART ASC;
+
+
+  -- High-Impact Disruption Rate --
+
+  SELECT -- percentage of disruption events classified as high severity
+    d.CompanyName,
+    d.CompanyID,
+    d.Region,
+    COUNT(*) AS Ndisruptions, -- total disruptions
+    SUM(CASE WHEN ic.ImpactLevel = 'High' THEN 1 ELSE 0 END) as NhighImpact, -- total high density disruptions
+    ROUND(100 * SUM(CASE WHEN ic.ImpactLevel = 'High' THEN 1 ELSE 0 END) / COUNT(*), 3) AS HDR -- percentage
+  FROM disruptionsInRange d
+  JOIN ImpactsCompany
+  JOIN Company c ON d.CompanyID = c.CompanyID
+  JOIN Location l ON c.LocationID = l.LocationID
+  GROUP BY d.CompanyID, d.CompanyName, d.Region
+  ORDER BY HDR DESC;
+
+  -- Total Downtime (TD) --
+
+  SELECT -- summation of time between disruption event date (start) and event recovery date
+    CompanyName,
+    CompanyID,
+    ContinentName AS Region,
+    COUNT(de.EventID) as Ndisruptions,
+    SUM(DATEDIFF(EventRecoveryDate, EventDate)) AS TD -- total downtime (in days)
+  FROM disruptionsInRange
+  GROUP BY CompanyID, CompanyName, Region
+  ORDER BY TD DESC;
+
+  -- Regional Risk Concentration (RRC) --
+
+  SELECT -- fraction of disruptions occuring in a region (user-entered)
+    Region,
+    COUNT(*) AS disruptionsInRegion,
+    (COUNT(*) / totalDisruptions) * 100 AS RRC -- regional risk concentration (percentage)
+  FROM disruptionsInRange, totalDisruptions
+  GROUP BY Region, totalDisruptions
+  ORDER BY RRC DESC;
+
+  -- Disruption Severity Distribution (DSD) -- 
+
+  SELECT -- counts of low/medium/high severity events
+    Impact Level,
+    COUNT(*) AS disruptionsCount
+  FROM disruptionsInRange
+  Group BY ImpactLevel
+  ORDER BY FIELD(ImpactLevel, 'Low', 'Medium', 'High')
+
 
 END //
+
 
 
 
