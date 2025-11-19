@@ -203,7 +203,8 @@ CREATE PROCEDURE DisruptionEventsDisplay(
 )
 BEGIN
 
-  SELECT
+  -- General Disruption Events Data -- 
+  SELECT -- distribution of disruption events by category - updated from company search to include by region and/or by the tier
     dc.CategoryName, 
     COUNT(de.EventID) AS EventCount
   FROM DisruptionCategory dc
@@ -218,7 +219,7 @@ BEGIN
   GROUP BY dc.CategoryName
   ORDER BY EventCount DESC;
 
-  SELECT
+  SELECT -- listed tabular format all disruption events
     c.CompanyName,
     c.CompanyID,
     c.TierLevel,
@@ -236,9 +237,89 @@ BEGIN
   JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
   JOIN Location l ON c.LocationID = l.LocationID
    WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
-    AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion)
-    AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
+    AND (userEnteredName IS NULL OR l.ContinentName = userEnteredRegion) -- paired by re
+    AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier) -- paired by tier if provided
   ORDER BY de.EventDate DESC;
+
+  -- Disruption Frequency (DF) -- 
+  -- observation frequency taken as T= per quarter for later bar chart--
+
+  WITH dateRange AS (
+    SELECT 
+      CASE 
+        WHEN userStartDate IS NOT NULL 
+          THEN userStartDate
+        ELSE (SELECT MIN(EventDate) FROM DisruptionEvent) -- earliest disruption default start
+      END AS disruptionStartDate
+      CASE
+        WHEN userEndDate IS NOT NULL
+          THEN userEndDate
+        ELSE (SELECT MAX(EventDate) FROM DisruptionEvent) -- most recent disruption default end
+      END AS disruptionEndDate
+    ),
+
+  disruptionsInRange AS ( -- finds all disruptions within the user-entered/default time range
+    SELECT
+      c.CompanyName,
+      c.CompanyID,  
+      de.EventID,
+      de.EventDate
+    FROM DisruptionEvent de
+    JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+    JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+    JOIN Location l ON c.LocationID = l.LocationID
+    JOIN dateRange dr
+    WHERE de.EventDate BETWEEN dr.disruptionStartDate AND dr.disruptionEndDate
+      AND (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
+      AND (userEnteredRegion IS NULL OR l.ContinentName = userEnteredRegion)
+      AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
+  )  
+
+  quartersInRange AS ( -- calculates number of quarters and stores said quarters within the time range (since specific date dependent for resultant number of quarters)
+      SELECT 
+          CONCAT(YEAR(dr.disruptionStartDate), '-Q', QUARTER(dr.disruptionStartDate)) AS QuarterLabel,
+          DATE_FORMAT(dr.disruptionStartDate, '%Y-%m-01') AS QuarterStart -- 01 constant since Jan 1, Apr 1, Jul 1, Oct 1 starts
+      FROM dateRange dr
+      UNION ALL
+      SELECT 
+        CONCAT(YEAR(DATE_ADD(QuarterStart, INTERVAL 3 MONTH)),
+               '-Q',
+               QUARTER(DATE_ADD(QuarterStart, INTERVAL 3 MONTH))) AS QuarterLabel,
+        DATE_ADD(QuarterStart, INTERVAL 3 MONTH)
+      FROM quartersInRange
+      JOIN dateRange dr
+      WHERE DATE_ADD(QuarterStart, INTERVAL 3 MONTH) <= dr.disruptionEndDate
+  ),
+
+quarterlyCounts AS (
+    SELECT
+        q.QuarterLabel,
+        d.CompanyID,
+        d.CompanyName,
+        COUNT(d.EventID) AS disruptionsThisQuarter
+    FROM quarterSpan q
+    LEFT JOIN disruptionsInRange d
+      ON QUARTER(d.EventDate) = SUBSTRING(q.QuarterLabel, 7, 1)
+     AND YEAR(d.EventDate) = SUBSTRING(q.QuarterLabel, 1, 4)
+    GROUP BY q.QuarterLabel, d.CompanyID, d.CompanyName
+),
+
+-- Compute final DF by company
+frequency AS (
+    SELECT
+        CompanyID,
+        CompanyName,
+        SUM(disruptionsThisQuarter) AS Ndisruptions,
+        COUNT(*) AS T_quarters,
+        SUM(disruptionsThisQuarter) / COUNT(*) AS DF
+    FROM quarterlyCounts
+    GROUP BY CompanyID, CompanyName
+)
+
+SELECT * FROM frequency
+ORDER BY DF DESC;
+
+  
 
 END //
 
