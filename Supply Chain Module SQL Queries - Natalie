@@ -1,5 +1,10 @@
 DELIMITER //
 
+-- COMPANY SEARCH contains Important Company Info and Key Performance Indicators --
+  -- mandatory input of company name, optional input of date range (start date and end date)--
+
+-- Important Company Info (subcategory of COMPANY SEARCH) -- 
+
 CREATE PROCEDURE CompanyInfoSearch( -- Company Info
   IN userEnteredName VARCHAR(100), -- searchable by name
   IN userStartDate DATE DEFAULT NULL, -- needed for date range for transactions
@@ -10,6 +15,16 @@ BEGIN
   SELECT c.* -- all columns in Company since either listed in A3 requirements (Location ID for address, Tier Level, and Company Type) or justifiable as important information (Company ID)
   FROM Company c
   WHERE c.Name = userEnteredName;
+
+  SELECT -- address
+    c.CompanyID,
+    c.CompanyName,
+    l.City,
+    l.CountryName,
+    l.ContinentName
+  FROM Company c
+  JOIN location l ON l.locationID = c.LocationID
+  WHERE c.CompanyName = userEnteredName;
 
   SELECT -- who they depend on, and who depends on them
     c.CompanyID,
@@ -117,8 +132,80 @@ BEGIN
   JOIN Company c ON a.CompanyID = c.CompanyID -- merges source/destination since adjustments all internal
   WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all adjustments if no date range specified, lists adjustments between date ends if specified
 ORDER BY a.AdjustmentDate; -- chronological order from most recent
+
+
+-- Key Performance Indicators (subcategory of COMPANY SEARCH)-- 
+
+  SELECT -- on time delivery rate (percentage shipments where delivery date before or equal to promised date)
+  
+
+  SELECT -- average deviation of delay
     
-    
+
+  WITH LastFourQuarters AS ( -- most recent four quarters calculated
+    SELECT
+      MOD(QUARTER(CURDATE()) - n - 1 + 4, 4) + 1 AS QuarterCycled, -- subtracting offsets four times, stays within 1-4 range (1 subtracts down to 4)
+      YEAR(CURDATE()) - IF(QUARTER(CURDATE()) - n <=0, 1, 0) AS RepYear -- once/if quarter 1 subtracts to 4 then goes to previous year
+    FROM
+      SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
+    ) AS offsets
+  )
+
+  SELECT -- financial health status over past year from today
+    c.CompanyName,
+    fr.CompanyID,
+    fr.Quarter,
+    fr.RepYear,
+    fr.HealthScore
+  FROM FinancialReport fr
+  JOIN LastFourQuarters lfq
+    ON fr.RepYear = lfq.RepYear 
+    AND fr.Quarter = CONCAT('Q', lfq.QuarterCycled) 
+  JOIN Company c
+    ON fr.CompanyID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName;
+  ORDER BY fr.RepYear DESC, fr.Quarter DESC; -- most recent four quarters (starting from most recent year)
+ 
+  SELECT -- distribution of disruption event counts over past year
+    dc.CategoryName,
+    COUNT(de.EventID) AS EventCount
+  FROM DisruptionCategory dc
+  LEFT JOIN DisruptionEvent de
+    ON dc.CategoryID = de.CategoryID
+    AND de.EventDate .= DATE_SUB(CURDATE(), INTERVAL 1 YEAR) -- from last year
+  GROUP BY dc.CategoryName
+  ORDER BY EventCount DESC; -- most common disruption event descending
+
+  SELECT -- and a list of the events
+    dc.CategoryID,
+    dc.CategoryName, 
+    dc.Description,
+    de.EventID,
+    de.EventDate,
+    de.EventRecoveryDate
+  FROM DisruptionEvent de
+  JOIN DisruptionCategory dc
+    ON de.CategoryID = dc.CategoryID
+  WHERE de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
+  ORDER BY de.EventDate DESC;
+
+
+
+-- DISRUPTION EVENTS contains DF, ART, HDR, TD, RRC, DSD --
+  -- one mandatory input of company, region, and/or tier, over a period of time (optional range, full history if not)--
+
+CREATE PROCEDURE DisruptionEventsDisplay
+
+
+
+
+
+
+
+
+
+
+
 
 
 
