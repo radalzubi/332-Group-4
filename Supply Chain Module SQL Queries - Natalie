@@ -456,43 +456,52 @@ CREATE PROCEDURE TransactionsExamination(
 )
 BEGIN
 
-WITH dateRange AS (
+  WITH dateRange AS (
+      SELECT
+        COALESCE(userStartDate, (SELECT(MIN(ActualDate) FROM Shipping)) as startDate, 
+        COALESCE(userEndDate, (SELECT MAX(ActualDate) FROM Shipping)) as endDate
+    ),
+
+  shipments AS (
     SELECT
-      COALESCE(userStartDate, (SELECT(MIN(ActualDate) FROM Shipping)) as startDate, 
-      COALESCE(userEndDate, (SELECT MAX(ActualDate) FROM Shipping)) as endDate
+      s.ShipmentID,
+      s.DistributorID,
+      s.ProductID,
+      s.SourceCompanyID, 
+      s.DestinationCompanyID,
+      s.ActualDate,
+      s.Quantity,
+      d.CompanyName AS DistributorName,
+      p.ProductName,
+      cs.CompanyName AS SourceCompany,
+      cs.LocationID AS SourceLocation,
+      cd.CompanyName AS DestinationCompany,
+      cd.LocationID AS DestinationLocation,
+      ls.CountryName AS SourceCountry,
+      ls.ContinentName AS SourceRegion,
+      ls.CityName AS SourceCity,
+      ld.CountryName AS DestinationCountry,
+      ld.ContinentName AS DestinationContinent,
+      ld.City as DestinationCity,
+    FROM Shipping s
+    JOIN Company d ON s.DistributorID = d.CompanyID
+    JOIN Product p ON s.ProductID = p.ProductID
+    JOIN Company cs ON s.SourceCompanyID = cs.CompanyID
+    JOIN Company cd ON s.DestinationCompanyID - cd.CompanyID
+    JOIN Location ls ON cs.LocationID = ls.LocationID
+    JOIN Location ld ON cd.LocationID = ld.LocationID
+    JOIN dateRange dr
+    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate AND (userSourceCompany IS NULL OR cs.CompanyName - userSourceCompany) AND (userDestinationCompany IS NULL OR cd.CompanyName = userDestinationCompany) AND (userDistributor IS NULL OR dr.CompanyName = userDistributor) AND (userLocation IS NULL OR ls.CountryName = userLocation OR ls.ContinentName = userLocation OR ls.City = userLocation OR ld.CountryName = userLocation OR ld.ContinentName = userLocation OR ld.City = userLocation)
   ),
 
-shipments AS (
-  SELECT
-    s.ShipmentID,
-    s.DistributorID,
-    s.ProductID,
-    s.SourceCompanyID, 
-    s.DestinationCompanyID,
-    s.ActualDate,
-    s.Quantity,
-    d.CompanyName AS DistributorName,
-    p.ProductName,
-    cs.CompanyName AS SourceCompany,
-    cs.LocationID AS SourceLocation,
-    cd.CompanyName AS DestinationCompany,
-    cd.LocationID AS DestinationLocation,
-    ls.CountryName AS SourceCountry,
-    ls.ContinentName AS SourceRegion,
-    ls.CityName AS SourceCity,
-    ld.CountryName AS DestinationCountry,
-    ld.ContinentName AS DestinationContinent,
-    ld.City as DestinationCity,
-  FROM Shipping s
-  JOIN Company d ON s.DistributorID = d.CompanyID
-  JOIN Product p ON s.ProductID = p.ProductID
-  JOIN Company cs ON s.SourceCompanyID = cs.CompanyID
-  JOIN Company cd ON s.DestinationCompanyID - cd.CompanyID
-  JOIN Location ls ON cs.LocationID = ls.LocationID
-  JOIN Location ld ON cd.LocationID = ld.LocationID
-  JOIN dateRange dr
-  WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate AND (userSourceCompany IS NULL OR cs.CompanyName - userSourceCompany) AND (userDestinationCompany IS NULL OR cd.CompanyName = userDestinationCompany) AND (userDistributor IS NULL OR dr.CompanyName = userDistributor) AND (userLocation IS NULL OR ls.CountryName = userLocation OR ls.ContinentName = userLocation OR ls.City = userLocation OR ld.CountryName = userLocation OR ld.ContinentName = userLocation OR ld.City = userLocation)
-),
+  statusOfShipments AS (
+    SELECT
+      *,
+    CASE 
+      WHEN ActualDate <= PromisedDate THEN 'On Time Delivery'
+      ELSE 'Late Delivery'
+    END AS DeliveryStatus
+  FROM shipments
 
 
 
