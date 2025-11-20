@@ -83,7 +83,7 @@ BEGIN
   FROM SuppliesProduct sp
   JOIN Product p ON sp.ProductID = p.ProductID
   JOIN Company c ON sp.SupplierID = c.CompanyID
-  WHERE c.CompanyName - userEnteredName
+  WHERE c.CompanyName = userEnteredName
   GROUP BY p.Category; -- category percentage out of all products
 
   SELECT -- shipping transactions (within date range)
@@ -98,7 +98,7 @@ BEGIN
   JOIN Shipping s on t.TransactionID = s.TransactionID
   JOIN Product p on s.ProductID = p.ProductID
   JOIN Company c ON (s.SourceCompanyID = c.CompanyID OR s.DesinationCompanyID = c.CompanyID) -- shows both shipped from (source company) and shipped to (destination company) transactions attached to search company
-  WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all shipments if no date range specified, lists shipments between date ends if specified
+  WHERE c.CompanyName = userEnteredName AND (s.ActualDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE) -- lists all shipments if no date range specified, lists shipments between date ends if specified
   ORDER BY s.ActualDatel; -- chronological order from most recent
 
   SELECT -- receiving transaction (within date range)
@@ -114,7 +114,7 @@ BEGIN
   JOIN Shipping s ON r.ShipmentID = s.ShipmentID -- to display source company (not the target company) of the product
   JOIN Product p ON s.ProductID = p.ProductID
   JOIN Company c ON r.ReceiverCompanyID = c.CompanyID
-  WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all transactions if no date range specified, lists transactions between date ends if specified
+  WHERE c.CompanyName = userEnteredName AND (r.ReceivedDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE) -- lists all transactions if no date range specified, lists transactions between date ends if specified
   ORDER BY r.ReceivedDate; -- chronological order from most recent
 
   SELECT -- adjustment transactions (within date range)
@@ -130,19 +130,61 @@ BEGIN
   JOIN InventoryAdjustment a ON t.TransactionID = a.TransactionID
   JOIN Product p ON a.ProductID = p.ProductID
   JOIN Company c ON a.CompanyID = c.CompanyID -- merges source/destination since adjustments all internal
-  WHERE c.CompanyName - userEnteredName AND (userStartDate IS NULL OR userEndDate IS NULL OR s.ActualDate BETWEEN userStartDate AND userEndDate) -- lists all adjustments if no date range specified, lists adjustments between date ends if specified
+  WHERE c.CompanyName = userEnteredName AND (a.AdjustmentDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE) -- lists all adjustments if no date range specified, lists adjustments between date ends if specified
   ORDER BY a.AdjustmentDate; -- chronological order from most recent
 
 
 -- Key Performance Indicators (subcategory of COMPANY SEARCH)-- 
+-- only applicable to distributors, non-distributor company entered then returns the default null --
 
-  SELECT -- on time delivery rate (percentage shipments where delivery date before or equal to promised date)
+  WITH dateRange AS ( -- only for user-input (first two A3 KPI bullet points only (on time delivery rate, average and standard deviation of delay))
+    SELECT 
+      COALESCE (userStartDate, (SELECT MIN(ActualDate) FROM Shipping)) AS startDate,
+      COALESCE
+
+  distributorShipments AS (
+    SELECT
+      s.ShipmentID,
+      s.PromisedDate,
+      s.ActualDate,
+      DATEDIFF(s.ActualDate, s.PromisedDate) AS daysDelayed
+  FROM Shipping s
+  JOIN Company c ON s.DistributorID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName AND c.Type = 'Distributor' AND (s.ActualDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)  -- all shipments if no date range specified, shipments between date ends if specified
+
+
+  SELECT -- on time delivery rate, (percentage shipments where delivery date before or equal to promised date), average delay, standard deviation of delay
+    c.Type AS CompanyType,
+
+    CASE -- on time delivery rate: percentage shipments where delivery date <= promised date
+      WHEN c.Type = 'Distributor' THEN (
+        SELECT
+          ROUND( 100 * SUM(CASE WHEN Actual Date <= PromisedDate THEN 1 ELSE 0 END) / COUNT(*), 4)
+        FROM distributorShipments
+      )
+      ELSE NULL
+    END AS onTimeDeliveryRate.
+
+    CASE -- average of delay
+      WHEN c.Type = 'Distributor' THEN (
+        SELECT ROUND(AVG(daysDelayed), 4) 
+        FROM distributorShipments
+      )
+      ELSE NULL
+    END AS averageDelay,
+
+    CASE -- standard deviation of delay
+      WHEN c.Type = 'Distributor' THEN (
+        SELECT ROUND(STDDEV(daysDelayed), 4)
+        FROM distributorShipments
+      )
+      ELSE NULL
+    END AS standardDeviationDelay
+
+  FROM Company c;
   
-
-  SELECT -- average deviation of delay
-    
-
-  WITH LastFourQuarters AS ( -- most recent four quarters calculated
+  
+  WITH LastFourQuarters AS ( -- most recent four quarters calculated (last two A3 KPI bullet points (financial health status and distribution/list of disruption events) one year from current date
     SELECT
       MOD(QUARTER(CURDATE()) - n - 1 + 4, 4) + 1 AS QuarterCycled, -- subtracting offsets four times, stays within 1-4 range (1 subtracts down to 4)
       YEAR(CURDATE()) - IF(QUARTER(CURDATE()) - n <=0, 1, 0) AS RepYear -- once/if quarter 1 subtracts to 4 then goes to previous year
@@ -211,7 +253,7 @@ BEGIN
     COUNT(de.EventID) AS EventCount
   FROM DisruptionCategory dc
   LEFT JOIN DisruptionEvent de ON dc.CategoryID = de.CategoryID
-  AND (userStartDate IS NULL OR userEndDate IS NULL OR de.EventDate BETWEEN userStartDate AND userEndDate)
+  WHERE (de.EventDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE) 
   LEFT JOIN ImpactsCompany ic ON de.EventID = ic.EventID
   LEFT JOIN Company c ON ic.AffectedCompanyID = c.CompanyID ON ic.AffectedCompanyID = c.CompanyID
   LEFT JOIN Location l ON c.LocationID - l.LocationID
@@ -484,3 +526,11 @@ SELECT
   c.*, -- CompanyID, CompanyName, LocationID, TierLevel, Type
   
 WHERE CompanyName LIKE CONCAT('%', EnteredName, '%');
+
+
+
+
+---------- DATE CORRECTION  --------- NEED TO REPLACE ALL
+
+AND s.ActualDate BETWEEN COALESCE(userStartDate, '1900-01-01')
+                             AND COALESCE(userEndDate, CURRENT_DATE)
