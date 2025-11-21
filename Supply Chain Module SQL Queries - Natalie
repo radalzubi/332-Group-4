@@ -487,21 +487,153 @@ BEGIN
     JOIN Company d ON s.DistributorID = d.CompanyID
     JOIN Product p ON s.ProductID = p.ProductID
     JOIN Company cs ON s.SourceCompanyID = cs.CompanyID
-    JOIN Company cd ON s.DestinationCompanyID - cd.CompanyID
+    JOIN Company cd ON s.DestinationCompanyID = cd.CompanyID
     JOIN Location ls ON cs.LocationID = ls.LocationID
     JOIN Location ld ON cd.LocationID = ld.LocationID
     JOIN dateRange dr
-    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate AND (userSourceCompany IS NULL OR cs.CompanyName - userSourceCompany) AND (userDestinationCompany IS NULL OR cd.CompanyName = userDestinationCompany) AND (userDistributor IS NULL OR dr.CompanyName = userDistributor) AND (userLocation IS NULL OR ls.CountryName = userLocation OR ls.ContinentName = userLocation OR ls.City = userLocation OR ld.CountryName = userLocation OR ld.ContinentName = userLocation OR ld.City = userLocation)
+    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate AND (userSourceCompany IS NULL OR cs.CompanyName = userSourceCompany) AND (userDestinationCompany IS NULL OR cd.CompanyName = userDestinationCompany) AND (userDistributor IS NULL OR d.CompanyName = userDistributor) AND (userLocation IS NULL OR ls.CountryName = userLocation OR ls.ContinentName = userLocation OR ls.City = userLocation OR ld.CountryName = userLocation OR ld.ContinentName = userLocation OR ld.City = userLocation)
+    ),
+
+  receivings AS (
+    SELECT
+      c.CompanyName AS ReceiverCompany
+      r.ReceivingID,
+      r.TransactionID,
+      r.ShipmentID,
+      r.ReceiverCompanyID, 
+      r.ReceivedDate,
+      r.QuantityReceived
+    FROM Receiving r
+    JOIN Company c on ReceiverCompanyID = c.CompanyID
+    JOIN dateRange dr
+    JOIN Shipping s ON r.ShipmentID = s.ShipmentID
+    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate 
+      AND (userSourceCompany IS NULL OR s.SourceCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userSourceCompany))
+      AND (userDestinationCompany IS NULL OR r.ReceiverCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDestinationCompany))
+      AND (userDistributor IS NULL OR s.DistributorID = (SELECT CompanyID FROM Company WHERE CompanyName = userDistributor))
   ),
+
+  adjustments AS (
+    SELECT
+      c.CompanyName AS CompanyName,
+      a.AdjustmentID,
+      a.TransactionID,
+      a.CompanyID,
+      a.ProductID,
+      a.AdjustmentDate,
+      a.QuantityChange,
+      a.Reason,
+      p.ProductName
+  FROM InventoryAdjustment a
+  JOIN Company c ON a.CompanyID = c.CompanyID
+  JOIN Product p ON a.ProductID = p.ProductID
+  JOIN date Range dr
+   WHERE a.AdjustmentDate BETWEEN dr.startDate AND dr.endDate
+      AND (userSourceCompany IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userSourceCompany))
+      AND (userDestinationCompany IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDestinationCompany))
+      AND (userDistributor IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDistributor))
+),
+    
 
   statusOfShipments AS (
     SELECT
       *,
     CASE 
+      WHEN ActualDate IS NULL THEN 'Currently Out on Delivery'
       WHEN ActualDate <= PromisedDate THEN 'On Time Delivery'
       ELSE 'Late Delivery'
     END AS DeliveryStatus
+    DATEDIFF(ActualDate, PromisedDate) as daysDelayed
   FROM shipments
+  ),
+
+  productsHandled AS (
+    SELECT
+      s.DistributorID,
+      s.DistributorName,  
+      p.ProductID,
+      p.ProductName,
+      p.Category,
+      sp.SupplyPrice,
+      COUNT(*) AS Nshipments,
+      SUM(s.Quantity) AS TotalQuantity
+    FROM statusOfShipments s
+    JOIN Product p ON s.ProductID = p.ProductID
+    LEFT JOIN SuppliesProduct sp ON sp.ProductID = p.ProductID AND sp.SupplierID = s.DistributorID
+    GROUP BY s.DistributorID, s.DistributorName, p.ProductID, p.ProductName, p.Category, sp.SupplyPrice
+  )
+
+  findDisruptionExposure AS (
+    SELECT 
+      d.CompanyName,
+      d.CompanyID,
+      COUNT(*) AS Ndisruptions,
+      COUNT(*) + 2 * SUM(CASE WHEN ic.ImpactLevel = 'High' THEN 1 ELSE 0 END) AS disruptionExposure
+    FROM Distributor d
+    LEFT JOIN ImpactsCompany ic ON d.CompanyID = ic.AffectedCompanyID
+    LEFT JOIN DisruptionEvent de ON ic.EventID = de.EventID
+    JOIN dateRange dr
+    WHERE (de.EventDate BETWEEN dr.startDate AND dr.endDate OR de.EventDate IS NULL) 
+    GROUP BY d.CompanyID, d.CompanyName
+  )
+
+  -- Ability to examine all transactions within time range or location, any leaving/arriving company --
+  SELECT 'Shipping' AS Transaction Type, * FROM shipments 
+  UNION ALL
+  SELECT 'Receiving' AS Transaction Type, * FROM receivings
+  UNION ALL
+  SELECT 'Adjustment' AS TransactionType, * FROM adjustments
+  ORDER BY TransactionType, ActualDate, AdjustmentDate, ReceivedDate;
+
+-- Distributor-specific --
+
+IF userDistributor IS NOT NULL THEN
+  SELECT
+    DistributorName,
+    COUNT(*) AS shipmentQuantity,
+    SUM(Quantity) AS shipmentVolume, -- shipment volume
+
+    ROUND(100 * SUM(CASE WHEN DeliveryStatus = 'On Time Delivery' THEN 1 ELSE 0 END)/COUNT(*), 4) AS onTimeDeliveryRate, -- on-time delivery rate
+
+    SUM(CASE WHEN s.DeliveryStatus = 'Currently Out on Delivery' THEN 1 ELSE 0 END) AS shipmentsOutOnDelivery,
+    SUM(CASE WHEN s.DeliveryStatus = 'Late Delivery' THEN 1 ELSE 0 END) AS lateShipments,
+    SUM(CASE WHEN s.DeliveryStatus = 'On Time Delivery' THEN 1 ELSE 0 END) AS onTimeShipments,
+    COUNT(*) AS totalDeliveries;
+
+    SELECT
+      ProductName,
+      Category, 
+      SupplyPrice
+    FROM productsHandled
+    WHERE distributor = userDistributor
+    GROUP BY Product Name, Category, SupplyPrice;
+
+    SELECT
+      Category,
+      COUNT(DISTINCT ShipmentID) AS categoryNumberOfShipments,
+      SUM(TotalQuantity) AS TotalQuantity
+    FROM productsHandled
+    WHERE DistributorName = userDistributor
+    GROUP BY Category;
+
+    SELECT 
+      Category,
+      SUM(SupplyPrice * TotalQuantity) AS TotalRevenue
+    FROM productsHandled
+    WHERE DistributorName = userDistributor
+    GROUP BY Category;
+    
+    SELECT
+      userDistributor AS DistributorName,
+      COUNT(DISTINCT ShipmentID) AS totalNumberOfShipments,
+      SUM(TotalQuantity) AS TotalQuantity,
+      SUM(SupplyPrice * TotalQuantity) AS TotalRevenue
+    FROM productsHandled
+    WHERE DistributorName = userDistributor;
+
+END IF;
+  
+
 
 
 
