@@ -363,7 +363,7 @@ DELIMITER ;
 
 ----- Ability to Examine All Transactions (within time range or location, any leaving specific company or arriving at) ---
 
-DELIMITER $$
+DELIMITER //
 
 CREATE PROCEDURE TransactionsExamination(
   IN userStartDate DATE,
@@ -475,8 +475,8 @@ BEGIN
       s.ProductName,
       s.Category,
       sp.SupplyPrice,
-      COUNT(*)                 AS NumShipments,
-      SUM(s.Quantity)          AS TotalQuantity
+      COUNT(*) AS NumShipments,
+      SUM(s.Quantity) AS TotalQuantity
     FROM statusOfShipments s
     LEFT JOIN Product p ON s.ProductID = p.ProductID
     LEFT JOIN SuppliesProduct sp ON sp.ProductID = s.ProductID AND sp.SupplierID = s.DistributorID
@@ -572,9 +572,32 @@ BEGIN
 
   ORDER BY TransactionType, EventDate, ReceivedDate, AdjustmentDate;
 
+
   IF userDistributor IS NOT NULL THEN -- for distributor-specific details about transactions
 
-    SELECT
+    SELECT -- shipment volume
+        d.CompanyName AS DistributorName,
+        SUM(s.Quantity) AS TotalQuantityShipped,
+        COUNT(DISTINCT s.ShipmentID) AS TotalShipments,
+        COUNT(DISTINCT s.ProductID) AS NumProductsHandled
+    FROM Shipping s
+    JOIN Company d ON s.DistributorID = d.CompanyID
+    WHERE d.CompanyName = userDistributor AND s.ActualDate BETWEEN userStartDate AND userEndDate
+    GROUP BY d.CompanyName;
+
+     SELECT -- on-time delivery rate
+        d.CompanyName AS DistributorName,
+        ROUND(
+            100 * SUM(CASE WHEN s.ActualDate <= s.PromisedDate THEN 1 ELSE 0 END) 
+            / GREATEST(COUNT(*), 1),
+            4
+        ) AS onTimeDeliveryRate_pct
+    FROM Shipping s
+    JOIN Company d ON s.DistributorID = d.CompanyID
+    WHERE d.CompanyName = userDistributor AND s.ActualDate BETWEEN userStartDate AND userEndDate
+    GROUP BY d.CompanyName;
+
+    SELECT -- which shipments are currently out/status distribution
       ph.DistributorName,
       COUNT(DISTINCT s.ShipmentID) AS shipmentCount,
       COALESCE(SUM(s.Quantity),0) AS shipmentVolume, -- shipment volume
@@ -646,7 +669,7 @@ BEGIN
 
   END IF;
 
-END$$
+END//
 
 DELIMITER ;
 
