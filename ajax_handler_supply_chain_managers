@@ -1,0 +1,361 @@
+<?php
+// ajax_handler_full.php
+session_start();
+
+// Database connection
+$servername = "localhost";
+$db_user    = "your_db_user";
+$db_pass    = "your_db_password";
+$db_name    = "your_db_name";
+
+$conn = @new mysqli($servername, $db_user, $db_pass, $db_name);
+header('Content-Type: application/json');
+
+$action = isset($_POST['action']) ? $_POST['action'] : '';
+
+switch($action) {
+    case 'companyInfoSearch':
+        companyInfoSearch($conn);
+        break;
+    case 'disruptionEventsDisplay':
+        disruptionEventsDisplay($conn);
+        break;
+    case 'transactionsExamination':
+        transactionsExamination($conn);
+        break;
+    case 'alertsOngoingDisruptions':
+        alertsOngoingDisruptions($conn);
+        break;
+    default:
+        echo json_encode(['error' => 'Invalid action: ' . $action]);
+        break;
+}
+
+// -------------------------
+// Company Info Search
+// -------------------------
+function companyInfoSearch($conn) {
+    $response = ['success' => true];
+
+    if (!$conn || $conn->connect_error) {
+        echo json_encode(['success'=>false,'error'=>$conn->connect_error]);
+        return;
+    }
+
+    $companyName = isset($_POST['companyName']) ? $conn->real_escape_string($_POST['companyName']) : '';
+    $startDate = isset($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
+    $endDate   = isset($_POST['endDate']) ? $_POST['endDate'] : date('Y-m-d');
+
+    // 1. Company Info
+    $sql = "SELECT * FROM Company WHERE CompanyName='$companyName'";
+    $response['companyInfo'] = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+
+    // 2. Address
+    $sql = "SELECT c.CompanyID, c.CompanyName, l.City, l.CountryName, l.ContinentName
+            FROM Company c
+            JOIN Location l ON c.LocationID = l.LocationID
+            WHERE c.CompanyName='$companyName'";
+    $response['address'] = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+
+    // 3. Dependencies
+    $sql = "SELECT c.CompanyID AS BaseCompanyID,
+                   depUp.CompanyID AS UpstreamCompanyID,
+                   depUp.CompanyName AS UpstreamCompanyName,
+                   depDown.CompanyID AS DownstreamCompanyID,
+                   depDown.CompanyName AS DownstreamCompanyName
+            FROM Company c
+            LEFT JOIN DependsOn d1 ON c.CompanyID = d1.DownstreamCompanyID
+            LEFT JOIN Company depUp ON d1.UpstreamCompanyID = depUp.CompanyID
+            LEFT JOIN DependsOn d2 ON c.CompanyID = d2.UpstreamCompanyID
+            LEFT JOIN Company depDown ON d2.DownstreamCompanyID = depDown.CompanyID
+            WHERE c.CompanyName='$companyName'";
+    $response['dependencies'] = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+
+    // 4. Latest Financial Report
+    $sql = "SELECT f.*
+            FROM FinancialReport f
+            JOIN Company c ON f.CompanyID = c.CompanyID
+            WHERE c.CompanyName='$companyName'
+            ORDER BY f.RepYear DESC, FIELD(f.Quarter,'Q4','Q3','Q2','Q1') DESC
+            LIMIT 1";
+    $response['latestFinancial'] = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+
+    // 5. Last Four Quarters Financial Health
+    $lastFourSQL = "
+    WITH LastFourQuarters AS (
+        SELECT
+            CONCAT('Q', MOD(QUARTER(CURDATE()) - n - 1 + 4, 4) + 1) AS Quarter,
+            YEAR(CURDATE()) - IF(QUARTER(CURDATE()) - n <= 0, 1, 0) AS RepYear
+        FROM (SELECT 0 AS n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3) AS offsets
+    )
+    SELECT fr.CompanyID, c.CompanyName, fr.Quarter, fr.RepYear, fr.HealthScore
+    FROM FinancialReport fr
+    JOIN LastFourQuarters lfq ON fr.RepYear = lfq.RepYear AND fr.Quarter = lfq.Quarter
+    JOIN Company c ON fr.CompanyID = c.CompanyID
+    WHERE c.CompanyName='$companyName'
+    ORDER BY fr.RepYear DESC, fr.Quarter DESC
+    ";
+    $response['financialHealthPastYear'] = $conn->query($lastFourSQL)->fetch_all(MYSQLI_ASSOC);
+
+    echo json_encode($response);
+}
+
+// -------------------------
+// Disruption Events Display
+// -------------------------
+function disruptionEventsDisplay($conn) {
+    $response = ['success'=>true];
+
+    $companyName   = isset($_POST['companyName']) ? $_POST['companyName'] : null;
+    $region        = isset($_POST['region']) ? $_POST['region'] : null;
+    $tier          = isset($_POST['tier']) ? $_POST['tier'] : null;
+    $startDate     = isset($_POST['startDate']) ? $_POST['startDate'] : null;
+    $endDate       = isset($_POST['endDate']) ? $_POST['endDate'] : null;
+
+    // Date range
+    $startDate = $startDate ?: '1000-01-01';
+    $endDate   = $endDate ?: date('Y-m-d');
+
+    // 1. Get disruptions in range
+    $sql = "
+    SELECT c.CompanyID, c.CompanyName, c.TierLevel, l.ContinentName AS Region,
+           de.EventID, de.EventDate, de.EventRecoveryDate, ic.ImpactLevel
+    FROM DisruptionEvent de
+    JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+    JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+    JOIN Location l ON c.LocationID = l.LocationID
+    WHERE de.EventDate BETWEEN '".$conn->real_escape_string($startDate)."' 
+                            AND '".$conn->real_escape_string($endDate)."'
+    ".($companyName ? "AND c.CompanyName='".$conn->real_escape_string($companyName)."'" : "")."
+    ".($region ? "AND l.ContinentName='".$conn->real_escape_string($region)."'" : "")."
+    ".($tier ? "AND c.TierLevel='".$conn->real_escape_string($tier)."'" : "")."
+    ORDER BY de.EventDate DESC
+    ";
+    $disruptions = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+    $response['disruptionsInRange'] = $disruptions;
+
+    // Compute metrics in PHP
+    $companyMetrics = [];
+    $totalDisruptions = count($disruptions);
+
+    foreach ($disruptions as $d) {
+        $cid = $d['CompanyID'];
+        if (!isset($companyMetrics[$cid])) {
+            $companyMetrics[$cid] = [
+                'CompanyID'=>$cid,
+                'CompanyName'=>$d['CompanyName'],
+                'Region'=>$d['Region'],
+                'Ndisruptions'=>0,
+                'DF_quarters'=>[],
+                'RecoveryDays'=>[],
+                'HighImpact'=>0
+            ];
+        }
+        $companyMetrics[$cid]['Ndisruptions']++;
+        // DF calculation: track unique year-quarter
+        $yr_q = date('Y', strtotime($d['EventDate'])).'-'.ceil(date('n', strtotime($d['EventDate']))/3);
+        $companyMetrics[$cid]['DF_quarters'][$yr_q] = 1;
+        // ART
+        if ($d['EventRecoveryDate']) {
+            $companyMetrics[$cid]['RecoveryDays'][] = (strtotime($d['EventRecoveryDate']) - strtotime($d['EventDate'])) / (60*60*24);
+        }
+        // HDR
+        if ($d['ImpactLevel']=='High') $companyMetrics[$cid]['HighImpact']++;
+    }
+
+    // Prepare JSON metrics
+    $dfList = $artList = $hdrList = $tdList = [];
+    foreach ($companyMetrics as $m) {
+        $quartersCount = count($m['DF_quarters']);
+        $DF = $quartersCount ? $m['Ndisruptions']/$quartersCount : null;
+        $ART = count($m['RecoveryDays']) ? round(array_sum($m['RecoveryDays'])/count($m['RecoveryDays']),2) : null;
+        $HDR = $m['Ndisruptions'] ? round(100*$m['HighImpact']/$m['Ndisruptions'],2) : null;
+        $TD  = count($m['RecoveryDays']) ? array_sum($m['RecoveryDays']) : null;
+
+        $dfList[]  = ['CompanyID'=>$m['CompanyID'],'CompanyName'=>$m['CompanyName'],'DF'=>$DF];
+        $artList[] = ['CompanyID'=>$m['CompanyID'],'CompanyName'=>$m['CompanyName'],'ART'=>$ART];
+        $hdrList[] = ['CompanyID'=>$m['CompanyID'],'CompanyName'=>$m['CompanyName'],'HDR'=>$HDR];
+        $tdList[]  = ['CompanyID'=>$m['CompanyID'],'CompanyName'=>$m['CompanyName'],'TD'=>$TD];
+    }
+
+    $response['DF']  = $dfList;
+    $response['ART'] = $artList;
+    $response['HDR'] = $hdrList;
+    $response['TD']  = $tdList;
+
+    // Regional Risk Concentration
+    $regionCounts = [];
+    foreach ($disruptions as $d) {
+        $r = $d['Region'];
+        if (!isset($regionCounts[$r])) $regionCounts[$r]=0;
+        $regionCounts[$r]++;
+    }
+    $rrcList = [];
+    foreach ($regionCounts as $r=>$count) {
+        $rrcList[] = ['Region'=>$r,'RRC'=>round(100*$count/$totalDisruptions,2)];
+    }
+    $response['RRC'] = $rrcList;
+
+    // Severity distribution
+    $severityCounts = ['Low'=>0,'Medium'=>0,'High'=>0];
+    foreach ($disruptions as $d) {
+        if (isset($severityCounts[$d['ImpactLevel']])) $severityCounts[$d['ImpactLevel']]++;
+    }
+    $severityList = [];
+    foreach (['Low','Medium','High'] as $lvl) {
+        $severityList[] = ['ImpactLevel'=>$lvl,'Count'=>$severityCounts[$lvl]];
+    }
+    $response['SeverityDistribution'] = $severityList;
+
+    echo json_encode($response);
+}
+
+// -------------------------
+// Ongoing Alerts
+// -------------------------
+function alertsOngoingDisruptions($conn) {
+    $response = ['success'=>true];
+
+    $sql = "SELECT c.CompanyName, de.EventID, de.EventDate AS StartDate, dc.CategoryName
+            FROM DisruptionEvent de
+            JOIN DisruptionCategory dc ON de.CategoryID=dc.CategoryID
+            JOIN ImpactsCompany ic ON de.EventID=ic.EventID
+            JOIN Company c ON ic.AffectedCompanyID=c.CompanyID
+            WHERE de.EventRecoveryDate IS NULL OR de.EventRecoveryDate > CURRENT_DATE()
+            ORDER BY de.EventDate DESC";
+    $response['ongoingAlerts'] = $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
+
+    echo json_encode($response);
+}
+
+// -------------------------
+// Transactions Examination
+// -------------------------
+function transactionsExamination($conn) {
+    $response = ['success'=>true];
+
+    $startDate = isset($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
+    $endDate   = isset($_POST['endDate']) ? $_POST['endDate'] : date('Y-m-d');
+    $location  = isset($_POST['location']) ? $_POST['location'] : null;
+    $sourceCompany = isset($_POST['sourceCompany']) ? $_POST['sourceCompany'] : null;
+    $destinationCompany = isset($_POST['destinationCompany']) ? $_POST['destinationCompany'] : null;
+    $distributor = isset($_POST['distributor']) ? $_POST['distributor'] : null;
+
+    // --- Shipping ---
+    $sqlShipping = "
+    SELECT 
+        s.ShipmentID, s.DistributorID, d.CompanyName AS DistributorName,
+        s.ProductID, p.ProductName, p.Category,
+        s.SourceCompanyID, cs.CompanyName AS SourceCompany,
+        s.DestinationCompanyID, cd.CompanyName AS DestinationCompany,
+        s.ActualDate, s.PromisedDate, s.Quantity,
+        CASE
+            WHEN s.ActualDate IS NULL THEN 'Currently Out on Delivery'
+            WHEN s.ActualDate <= s.PromisedDate THEN 'On Time Delivery'
+            ELSE 'Late Delivery'
+        END AS DeliveryStatus,
+        DATEDIFF(s.ActualDate, s.PromisedDate) AS daysDelayed
+    FROM Shipping s
+    JOIN Company d  ON s.DistributorID = d.CompanyID
+    JOIN Product p  ON s.ProductID = p.ProductID
+    JOIN Company cs ON s.SourceCompanyID = cs.CompanyID
+    JOIN Company cd ON s.DestinationCompanyID = cd.CompanyID
+    JOIN Location ls ON cs.LocationID = ls.LocationID
+    JOIN Location ld ON cd.LocationID = ld.LocationID
+    WHERE s.ActualDate BETWEEN '".$conn->real_escape_string($startDate)."' AND '".$conn->real_escape_string($endDate)."'
+    ".($sourceCompany ? "AND cs.CompanyName='".$conn->real_escape_string($sourceCompany)."'" : "")."
+    ".($destinationCompany ? "AND cd.CompanyName='".$conn->real_escape_string($destinationCompany)."'" : "")."
+    ".($distributor ? "AND d.CompanyName='".$conn->real_escape_string($distributor)."'" : "")."
+    ".($location ? "AND (ls.CountryName='".$conn->real_escape_string($location)."' OR ls.ContinentName='".$conn->real_escape_string($location)."' OR ls.CityName='".$conn->real_escape_string($location)."' OR ld.CountryName='".$conn->real_escape_string($location)."' OR ld.ContinentName='".$conn->real_escape_string($location)."' OR ld.CityName='".$conn->real_escape_string($location)."')" : "")."
+    ORDER BY s.ActualDate DESC
+    ";
+    $response['shipping'] = $conn->query($sqlShipping)->fetch_all(MYSQLI_ASSOC);
+
+    // --- Receiving ---
+    $sqlReceiving = "
+    SELECT 
+        r.ReceivingID, r.TransactionID, r.ShipmentID,
+        r.ReceiverCompanyID, c.CompanyName AS ReceiverCompany,
+        r.ReceivedDate, r.QuantityReceived,
+        s.SourceCompanyID, s.DestinationCompanyID, s.DistributorID,
+        s.ProductID, s.ActualDate
+    FROM Receiving r
+    JOIN Shipping s ON r.ShipmentID = s.ShipmentID
+    JOIN Company c ON r.ReceiverCompanyID = c.CompanyID
+    WHERE s.ActualDate BETWEEN '".$conn->real_escape_string($startDate)."' AND '".$conn->real_escape_string($endDate)."'
+    ".($sourceCompany ? "AND s.SourceCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName='".$conn->real_escape_string($sourceCompany)."' LIMIT 1)" : "")."
+    ".($destinationCompany ? "AND r.ReceiverCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName='".$conn->real_escape_string($destinationCompany)."' LIMIT 1)" : "")."
+    ".($distributor ? "AND s.DistributorID = (SELECT CompanyID FROM Company WHERE CompanyName='".$conn->real_escape_string($distributor)."' LIMIT 1)" : "")."
+    ORDER BY r.ReceivedDate DESC
+    ";
+    $response['receiving'] = $conn->query($sqlReceiving)->fetch_all(MYSQLI_ASSOC);
+
+    // --- Adjustments ---
+    $sqlAdjustment = "
+    SELECT 
+        a.AdjustmentID, a.TransactionID, a.CompanyID, c.CompanyName, 
+        a.ProductID, p.ProductName, a.AdjustmentDate, a.QuantityChange, a.Reason
+    FROM InventoryAdjustment a
+    JOIN Company c ON a.CompanyID = c.CompanyID
+    JOIN Product p ON a.ProductID = p.ProductID
+    WHERE a.AdjustmentDate BETWEEN '".$conn->real_escape_string($startDate)."' AND '".$conn->real_escape_string($endDate)."'
+    ".($sourceCompany ? "AND a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName='".$conn->real_escape_string($sourceCompany)."' LIMIT 1)" : "")."
+    ".($destinationCompany ? "AND a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName='".$conn->real_escape_string($destinationCompany)."' LIMIT 1)" : "")."
+    ".($distributor ? "AND a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName='".$conn->real_escape_string($distributor)."' LIMIT 1)" : "")."
+    ORDER BY a.AdjustmentDate DESC
+    ";
+    $response['adjustment'] = $conn->query($sqlAdjustment)->fetch_all(MYSQLI_ASSOC);
+
+    // --- Distributor-specific KPIs and Products ---
+    if ($distributor) {
+        // Products handled
+        $sqlProducts = "
+        SELECT s.ProductID, p.ProductName, p.Category, sp.SupplyPrice,
+               COUNT(*) AS NumShipments, SUM(s.Quantity) AS TotalQuantity,
+               (sp.SupplyPrice * SUM(s.Quantity)) AS TotalRevenuePerProduct
+        FROM Shipping s
+        JOIN Product p ON s.ProductID = p.ProductID
+        LEFT JOIN SuppliesProduct sp ON sp.ProductID = s.ProductID
+        JOIN Company d ON s.DistributorID = d.CompanyID
+        WHERE d.CompanyName='".$conn->real_escape_string($distributor)."'
+        AND s.ActualDate BETWEEN '".$conn->real_escape_string($startDate)."' AND '".$conn->real_escape_string($endDate)."'
+        GROUP BY s.ProductID, p.ProductName, p.Category, sp.SupplyPrice
+        ";
+        $response['productsHandled'] = $conn->query($sqlProducts)->fetch_all(MYSQLI_ASSOC);
+
+        // Distributor shipment KPIs
+        $sqlKPIs = "
+        SELECT d.CompanyName AS DistributorName,
+               COUNT(DISTINCT s.ShipmentID) AS shipmentCount,
+               SUM(s.Quantity) AS shipmentVolume,
+               ROUND(100*SUM(CASE WHEN s.ActualDate <= s.PromisedDate THEN 1 ELSE 0 END)/GREATEST(COUNT(*),1),4) AS onTimeDeliveryRate_pct,
+               SUM(CASE WHEN s.ActualDate IS NULL THEN 1 ELSE 0 END) AS shipmentsOutOnDelivery,
+               SUM(CASE WHEN s.ActualDate > s.PromisedDate THEN 1 ELSE 0 END) AS lateShipments
+        FROM Shipping s
+        JOIN Company d ON s.DistributorID = d.CompanyID
+        WHERE d.CompanyName='".$conn->real_escape_string($distributor)."'
+        AND s.ActualDate BETWEEN '".$conn->real_escape_string($startDate)."' AND '".$conn->real_escape_string($endDate)."'
+        ";
+        $response['distributorKPIs'] = $conn->query($sqlKPIs)->fetch_all(MYSQLI_ASSOC);
+
+        // Disruption exposure for distributor
+        $sqlExposure = "
+        SELECT d.CompanyName,
+               COUNT(DISTINCT de.EventID) AS Ndisruptions,
+               (COUNT(DISTINCT de.EventID) + 2 * COALESCE(SUM(CASE WHEN ic.ImpactLevel='High' THEN 1 ELSE 0 END),0)) AS disruptionExposure
+        FROM Company d
+        LEFT JOIN ImpactsCompany ic ON d.CompanyID = ic.AffectedCompanyID
+        LEFT JOIN DisruptionEvent de ON ic.EventID = de.EventID
+        WHERE d.CompanyName='".$conn->real_escape_string($distributor)."'
+        AND (de.EventDate BETWEEN '".$conn->real_escape_string($startDate)."' AND '".$conn->real_escape_string($endDate)."' OR de.EventDate IS NULL)
+        GROUP BY d.CompanyName
+        ";
+        $response['disruptionExposure'] = $conn->query($sqlExposure)->fetch_all(MYSQLI_ASSOC);
+    }
+
+    echo json_encode($response);
+}
+if ($conn) {
+    $conn->close();
+}
+?>
