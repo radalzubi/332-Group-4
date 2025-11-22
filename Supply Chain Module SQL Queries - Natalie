@@ -1857,30 +1857,22 @@ DELIMITER ;
 
 -------------------------------------------------------- OVERALL CORRECTED -------------------------------------------------------------
 
-
-
-
+----- Company Info Search ------
 
 DELIMITER //
 
-CREATE PROCEDURE CompanyInfoSearch(
+CREATE PROCEDURE CompanyInfoSearch( 
   IN userEnteredName VARCHAR(100),
   IN userStartDate DATE,
   IN userEndDate DATE
 )
 BEGIN
 
-  /* ===============================
-     BASIC COMPANY INFO
-     =============================== */
-  SELECT *
+  SELECT * -- company info (searchable by name)
   FROM Company
   WHERE CompanyName = userEnteredName;
 
-  /* ===============================
-     COMPANY LOCATION
-     =============================== */
-  SELECT
+  SELECT -- address (city, country, continent)
     c.CompanyID,
     c.CompanyName,
     l.City,
@@ -1890,42 +1882,43 @@ BEGIN
   JOIN Location l ON c.LocationID = l.LocationID
   WHERE c.CompanyName = userEnteredName;
 
-  /* ===============================
-     DEPENDENCY RELATIONSHIPS
-     =============================== */
-  SELECT
-    c.CompanyID AS BaseCompanyID,
-    depUp.CompanyID AS UpstreamCompanyID,
-    depUp.CompanyName AS UpstreamCompanyName,
+  SELECT -- who they depend on, and who depends on them
+    c.CompanyID AS BaseCompanyID, -- searched company
+    depUp.CompanyID AS UpstreamCompanyID, 
+    depUp.CompanyName AS UpstreamCompanyName, -- has dependent(s)
     depDown.CompanyID AS DownstreamCompanyID,
-    depDown.CompanyName AS DownstreamCompanyName
+    depDown.CompanyName AS DownstreamCompanyName -- is dependent
   FROM Company c
-  LEFT JOIN DependsOn d1 
-    ON c.CompanyID = d1.DownstreamCompanyID
-  LEFT JOIN Company depUp 
-    ON d1.UpstreamCompanyID = depUp.CompanyID
-  LEFT JOIN DependsOn d2 
-    ON c.CompanyID = d2.UpstreamCompanyID
-  LEFT JOIN Company depDown 
-    ON d2.DownstreamCompanyID = depDown.CompanyID
+  LEFT JOIN DependsOn d1 ON c.CompanyID = d1.DownstreamCompanyID
+  LEFT JOIN Company depUp ON d1.UpstreamCompanyID = depUp.CompanyID -- dependent companies on searched company
+  LEFT JOIN DependsOn d2 ON c.CompanyID = d2.UpstreamCompanyID
+  LEFT JOIN Company depDown ON d2.DownstreamCompanyID = depDown.CompanyID -- companies that searched company depends on
   WHERE c.CompanyName = userEnteredName;
 
-  /* ===============================
-     MOST RECENT FINANCIAL REPORT
-     =============================== */
-  SELECT f.*
+  SELECT f.* -- most recent financial status
   FROM FinancialReport f
   JOIN Company c ON f.CompanyID = c.CompanyID
   WHERE c.CompanyName = userEnteredName
-  ORDER BY 
-    f.RepYear DESC,
-    FIELD(f.Quarter, 'Q4','Q3','Q2','Q1') DESC
-  LIMIT 1;
+  ORDER BY f.RepYear DESC, FIELD(f.Quarter, 'Q4','Q3','Q2','Q1') DESC -- latest year and quarter
+  LIMIT 1; -- most recent
 
-  /* ===============================
-     PRODUCTS SUPPLIED
-     =============================== */
-  SELECT
+  SELECT -- capacity (if manufacturer)
+      c.CompanyName,
+      m.FactoryCapacity AS TotalCapacity
+  FROM Company c
+  JOIN Manufacturer m ON c.CompanyID = m.CompanyID
+  WHERE c.CompanyName = userEnteredName;
+
+  SELECT -- unique routes operated (if distirbutor)
+      c.CompanyName,
+      COUNT(DISTINCT CONCAT(s.SourceCompanyID, '->', s.DestinationCompanyID)) AS UniqueRoutes
+  FROM Company c
+  JOIN Distributor d ON c.CompanyID = d.CompanyID
+  JOIN Shipping s ON d.CompanyID = s.DistributorID
+  WHERE c.CompanyName = userEnteredName
+  GROUP BY c.CompanyName;
+
+  SELECT -- which products they supply
     p.ProductID,
     p.ProductName,
     sp.SupplyPrice
@@ -1934,10 +1927,7 @@ BEGIN
   JOIN Company c ON sp.SupplierID = c.CompanyID
   WHERE c.CompanyName = userEnteredName;
 
-  /* ===============================
-     PRODUCT DIVERSITY
-     =============================== */
-  SELECT
+  SELECT -- the diversity of products (based on Piazza question 215: "A3 - Supply Chain Manager Module - Diversity of Products Clarification")
     p.Category,
     COUNT(*) AS TotalProductNumber,
     ROUND(
@@ -1945,7 +1935,7 @@ BEGIN
         SELECT COUNT(*) FROM SuppliesProduct sp2
         JOIN Company c2 ON sp2.SupplierID = c2.CompanyID
         WHERE c2.CompanyName = userEnteredName
-      ), 2
+      ), 4
     ) AS PercentOfTotalProducts
   FROM SuppliesProduct sp
   JOIN Product p ON sp.ProductID = p.ProductID
@@ -1953,10 +1943,7 @@ BEGIN
   WHERE c.CompanyName = userEnteredName
   GROUP BY p.Category;
 
-  /* ===============================
-     SHIPPING TRANSACTIONS
-     =============================== */
-  SELECT
+  SELECT -- list of shipping transactions
     t.TransactionID,
     'Shipping' AS TransactionType,
     s.SourceCompanyID,
@@ -1965,23 +1952,13 @@ BEGIN
     s.ActualDate AS TransactionDate,
     p.ProductName
   FROM InventoryTransaction t
-  JOIN Shipping s 
-    ON t.TransactionID = s.TransactionID
-  JOIN Product p 
-    ON s.ProductID = p.ProductID
-  JOIN Company c 
-    ON (s.SourceCompanyID = c.CompanyID 
-     OR s.DestinationCompanyID = c.CompanyID)
-  WHERE c.CompanyName = userEnteredName
-    AND s.ActualDate BETWEEN 
-        COALESCE(userStartDate, '1000-01-01') 
-        AND COALESCE(userEndDate, CURRENT_DATE)
+  JOIN Shipping s ON t.TransactionID = s.TransactionID
+  JOIN Product p ON s.ProductID = p.ProductID
+  JOIN Company c ON (s.SourceCompanyID = c.CompanyID OR s.DestinationCompanyID = c.CompanyID)
+  WHERE c.CompanyName = userEnteredName AND s.ActualDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
   ORDER BY s.ActualDate DESC;
 
-  /* ===============================
-     RECEIVING TRANSACTIONS
-     =============================== */
-  SELECT
+  SELECT -- list of receiving transactions
     t.TransactionID,
     'Receiving' AS TransactionType,
     r.ReceivedDate AS TransactionDate,
@@ -1990,24 +1967,14 @@ BEGIN
     s.SourceCompanyID,
     p.ProductName
   FROM InventoryTransaction t
-  JOIN Receiving r 
-    ON t.TransactionID = r.TransactionID
-  JOIN Shipping s 
-    ON r.ShipmentID = s.ShipmentID
-  JOIN Product p 
-    ON s.ProductID = p.ProductID
-  JOIN Company c 
-    ON r.ReceiverCompanyID = c.CompanyID
-  WHERE c.CompanyName = userEnteredName
-    AND r.ReceivedDate BETWEEN 
-        COALESCE(userStartDate, '1000-01-01') 
-        AND COALESCE(userEndDate, CURRENT_DATE)
+  JOIN Receiving r ON t.TransactionID = r.TransactionID
+  JOIN Shipping s ON r.ShipmentID = s.ShipmentID
+  JOIN Product p ON s.ProductID = p.ProductID
+  JOIN Company c ON r.ReceiverCompanyID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName AND r.ReceivedDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
   ORDER BY r.ReceivedDate DESC;
 
-  /* ===============================
-     INVENTORY ADJUSTMENTS
-     =============================== */
-  SELECT
+  SELECT -- list of adjustment transactions
     t.TransactionID,
     'Adjustment' AS TransactionType,
     a.AdjustmentDate,
@@ -2016,44 +1983,28 @@ BEGIN
     p.ProductName,
     a.Reason
   FROM InventoryTransaction t
-  JOIN InventoryAdjustment a 
-    ON t.TransactionID = a.TransactionID
-  JOIN Product p 
-    ON a.ProductID = p.ProductID
-  JOIN Company c 
-    ON a.CompanyID = c.CompanyID
-  WHERE c.CompanyName = userEnteredName
-    AND a.AdjustmentDate BETWEEN 
-        COALESCE(userStartDate, '1000-01-01') 
-        AND COALESCE(userEndDate, CURRENT_DATE)
+  JOIN InventoryAdjustment a ON t.TransactionID = a.TransactionID
+  JOIN Product p ON a.ProductID = p.ProductID
+  JOIN Company c ON a.CompanyID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName AND a.AdjustmentDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
   ORDER BY a.AdjustmentDate DESC;
 
-  /* ===================================================
-     KPI SECTION (Only meaningful for Distributors)
-     =================================================== */
-
-  WITH distributorShipments AS (
+  WITH distributorShipments AS ( -- Key Performance Indicators (within date range)
     SELECT
       s.ShipmentID,
       s.PromisedDate,
       s.ActualDate,
       DATEDIFF(s.ActualDate, s.PromisedDate) AS daysDelayed
     FROM Shipping s
-    JOIN Company c 
-      ON s.DistributorID = c.CompanyID
-    WHERE c.CompanyName = userEnteredName 
-      AND c.Type = 'Distributor'
-      AND s.ActualDate BETWEEN 
-          COALESCE(userStartDate, '1000-01-01') 
-          AND COALESCE(userEndDate, CURRENT_DATE)
+    JOIN Company c ON s.DistributorID = c.CompanyID
+    WHERE c.CompanyName = userEnteredName AND c.Type = 'Distributor' AND s.ActualDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
   )
 
   SELECT 
     c.CompanyName,
     c.Type AS CompanyType,
 
-    -- On-time delivery rate
-    CASE 
+    CASE -- on time delivery rate (from Piazza question 223 only for distributors)
       WHEN c.Type = 'Distributor' THEN (
         SELECT ROUND(
           100.0 * SUM(CASE WHEN ActualDate <= PromisedDate THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0),
@@ -2064,8 +2015,7 @@ BEGIN
       ELSE NULL
     END AS OnTimeDeliveryRate,
 
-    -- Average delay
-    CASE 
+    CASE -- average of delay: based on difference between delivery and promised dates (from Piazza question 223 only for distributors)
       WHEN c.Type = 'Distributor' THEN (
         SELECT ROUND(AVG(daysDelayed), 4)
         FROM distributorShipments
@@ -2073,8 +2023,7 @@ BEGIN
       ELSE NULL
     END AS AverageDelay,
 
-    -- Standard deviation of delay
-    CASE 
+    CASE -- standard deviation of delay: based on difference between delivery and promised dates (from Piazza question 223 only for distributors)
       WHEN c.Type = 'Distributor' THEN (
         SELECT ROUND(STDDEV_POP(daysDelayed), 4)
         FROM distributorShipments
@@ -2085,11 +2034,7 @@ BEGIN
   FROM Company c
   WHERE c.CompanyName = userEnteredName;
 
-  /* ===================================================
-     LAST 4 QUARTERS FINANCIAL HEALTH
-     =================================================== */
-
-  WITH LastFourQuarters AS (
+  WITH LastFourQuarters AS ( -- finding the four quarters counting back a year ago from today
     SELECT
       CONCAT('Q', MOD(QUARTER(CURDATE()) - n - 1 + 4, 4) + 1) AS Quarter,
       YEAR(CURDATE()) - IF(QUARTER(CURDATE()) - n <= 0, 1, 0) AS RepYear
@@ -2101,40 +2046,27 @@ BEGIN
     ) AS offsets
   )
 
-  SELECT 
+  SELECT -- financial health status over past year from today
     c.CompanyName,
     fr.CompanyID,
     fr.Quarter,
     fr.RepYear,
     fr.HealthScore
   FROM FinancialReport fr
-  JOIN LastFourQuarters lfq
-    ON fr.RepYear = lfq.RepYear 
-    AND fr.Quarter = lfq.Quarter
-  JOIN Company c
-    ON fr.CompanyID = c.CompanyID
+  JOIN LastFourQuarters lfq ON fr.RepYear = lfq.RepYear AND fr.Quarter = lfq.Quarter
+  JOIN Company c ON fr.CompanyID = c.CompanyID
   WHERE c.CompanyName = userEnteredName
   ORDER BY fr.RepYear DESC, fr.Quarter DESC;
 
-  /* ===================================================
-     DISTRIBUTION OF DISRUPTION EVENTS (PAST YEAR)
-     =================================================== */
-
-  SELECT 
+  SELECT -- distribution of disruption event counts over past year
     dc.CategoryName,
     COUNT(de.EventID) AS EventCount
   FROM DisruptionCategory dc
-  LEFT JOIN DisruptionEvent de
-    ON dc.CategoryID = de.CategoryID
-    AND de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
+  LEFT JOIN DisruptionEvent de ON dc.CategoryID = de.CategoryID AND de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
   GROUP BY dc.CategoryName
   ORDER BY EventCount DESC;
 
-  /* ===================================================
-     DISRUPTION EVENT LIST (PAST YEAR)
-     =================================================== */
-
-  SELECT
+  SELECT -- a list of the disruption events
     dc.CategoryID,
     dc.CategoryName, 
     dc.Description,
@@ -2142,14 +2074,16 @@ BEGIN
     de.EventDate,
     de.EventRecoveryDate
   FROM DisruptionEvent de
-  JOIN DisruptionCategory dc
-    ON de.CategoryID = dc.CategoryID
+  JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
   WHERE de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
   ORDER BY de.EventDate DESC;
 
 END //
 
 DELIMITER ;
+
+
+---- Disruption Events (by company, region, tier, over period of time) ----
 
 DELIMITER //
 
@@ -2182,11 +2116,8 @@ BEGIN
     JOIN ImpactsCompany ic ON de.EventID = ic.EventID
     JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
     JOIN Location l ON c.LocationID = l.LocationID
-    JOIN dateRange dr 
-         ON de.EventDate BETWEEN dr.disruptionStartDate AND dr.disruptionEndDate
-    WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName)
-      AND (userEnteredRegion IS NULL OR l.ContinentName = userEnteredRegion)
-      AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
+    JOIN dateRange dr ON de.EventDate BETWEEN dr.disruptionStartDate AND dr.disruptionEndDate
+    WHERE (userEnteredName IS NULL OR c.CompanyName = userEnteredName) AND (userEnteredRegion IS NULL OR l.ContinentName = userEnteredRegion) AND (userEnteredTier IS NULL OR c.TierLevel = userEnteredTier)
   ),
 
   totalDisruptions AS (
@@ -2194,92 +2125,82 @@ BEGIN
     FROM disruptionsInRange
   )
 
-  /* --- DISTRIBUTION BY CATEGORY --- */
-  SELECT 
+  SELECT -- disruptions by category
     dc.CategoryName,
     COUNT(de.EventID) AS EventCount
   FROM DisruptionCategory dc
-  LEFT JOIN DisruptionEvent de 
-         ON dc.CategoryID = de.CategoryID
-  LEFT JOIN ImpactsCompany ic 
-         ON de.EventID = ic.EventID
-  LEFT JOIN disruptionsInRange d 
-         ON ic.EventID = d.EventID
+  LEFT JOIN DisruptionEvent de ON dc.CategoryID = de.CategoryID
+  LEFT JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+  LEFT JOIN disruptionsInRange d ON ic.EventID = d.EventID
   GROUP BY dc.CategoryName
   ORDER BY EventCount DESC;
 
-  /* --- LIST ALL EVENTS --- */
-  SELECT *
+  SELECT * -- all disruption events over time period
   FROM disruptionsInRange
   ORDER BY EventDate DESC;
 
-  /* --- DISRUPTION FREQUENCY --- */
-  SELECT 
+  SELECT -- Disruption Frequency (DF), by company as bar chart
     CompanyID,
     CompanyName,
     COUNT(*) AS Ndisruptions,
     COUNT(DISTINCT CONCAT(YEAR(EventDate), '-', QUARTER(EventDate))) AS T_quarters,
-    COUNT(*) / COUNT(DISTINCT CONCAT(YEAR(EventDate), '-', QUARTER(EventDate))) AS DF
+    COUNT(*) / COUNT(DISTINCT CONCAT(YEAR(EventDate), '-', QUARTER(EventDate))) AS DF -- how often disruptions occur for a company or across a network
   FROM disruptionsInRange
   GROUP BY CompanyID, CompanyName
   ORDER BY DF DESC;
 
-  /* --- AVERAGE RECOVERY TIME --- */
-  SELECT 
+  SELECT -- Average Recovery Time (ART), histogram
     CompanyID,
-    CompanyName,
-    Region,
+    CompanyName, -- affected company
+    Region, -- affected region
     COUNT(*) AS Ndisruptions,
-    AVG(DATEDIFF(EventRecoveryDate, EventDate)) AS ART
+    AVG(DATEDIFF(EventRecoveryDate, EventDate)) AS ART -- how long on average for affected node to return to normal
   FROM disruptionsInRange
   WHERE EventRecoveryDate IS NOT NULL
   GROUP BY CompanyID, CompanyName, Region
   ORDER BY ART ASC;
 
-  /* --- HIGH DISRUPTION RATE --- */
-  SELECT
+  SELECT -- High-Impact Disruption Rate (HDR)
     CompanyID,
     CompanyName,
     Region,
     COUNT(*) AS Ndisruptions,
     SUM(CASE WHEN ImpactLevel = 'High' THEN 1 ELSE 0 END) AS NhighImpact,
-    ROUND(100 * SUM(CASE WHEN ImpactLevel = 'High' THEN 1 ELSE 0 END) / COUNT(*), 2) AS HDR
+    ROUND(100 * SUM(CASE WHEN ImpactLevel = 'High' THEN 1 ELSE 0 END) / COUNT(*), 2) AS HDR -- share of disruptions classified as high severity
   FROM disruptionsInRange
   GROUP BY CompanyID, CompanyName, Region
   ORDER BY HDR DESC;
 
-  /* --- TOTAL DOWNTIME --- */
-  SELECT
+  SELECT -- Total Downtime (TD), histogram
     CompanyID,
     CompanyName,
     Region,
-    SUM(DATEDIFF(EventRecoveryDate, EventDate)) AS TD
+    SUM(DATEDIFF(EventRecoveryDate, EventDate)) AS TD -- aggregate of downtime across all disruptions for given company/region
   FROM disruptionsInRange
   WHERE EventRecoveryDate IS NOT NULL
   GROUP BY CompanyID, CompanyName, Region
   ORDER BY TD DESC;
 
-  /* --- REGIONAL RISK CONCENTRATION --- */
-  SELECT
+  SELECT -- Regional Risk Concentration (RRC), heatmap
     Region,
     COUNT(*) AS disruptionsInRegion,
-    ROUND(100 * COUNT(*) / (SELECT totalDisruptions FROM totalDisruptions), 2) AS RRC
+    ROUND(100 * COUNT(*) / (SELECT totalDisruptions FROM totalDisruptions), 2) AS RRC -- fraction of disruptions occuring in a region
   FROM disruptionsInRange
   GROUP BY Region
   ORDER BY RRC DESC;
 
-  /* --- SEVERITY DISTRIBUTION --- */
-  SELECT
+  SELECT -- Disruption Severity Distribution, stacked bar chart
     ImpactLevel,
     COUNT(*) AS disruptionsCount
   FROM disruptionsInRange
   GROUP BY ImpactLevel
-  ORDER BY FIELD(ImpactLevel, 'Low', 'Medium', 'High');
+  ORDER BY FIELD(ImpactLevel, 'Low', 'Medium', 'High'); -- counts of low/medium/high severity events
 
 END//
 
 DELIMITER ;
 
+---- Alerts On Screen for New/Ongoing Disruptions ----
 
 CREATE PROCEDURE AlertsOngoingDisruptions()
 BEGIN 
@@ -2292,13 +2213,13 @@ BEGIN
   JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
   JOIN ImpactsCompany ic ON de.EventID = ic.EventID
   JOIN Company c ON ic.AffectedCompanyID = c.CompanyID 
-  WHERE de.EventRecoveryDate IS NULL 
-     OR de.EventRecoveryDate > CURRENT_DATE()
+  WHERE de.EventRecoveryDate IS NULL OR de.EventRecoveryDate > CURRENT_DATE() -- added event recovery date after current date because disruption event w/ ID of 15 end 11/01/2025 (during A3)
   ORDER BY de.EventDate DESC;
 END//
 
 DELIMITER ;
 
+----- Ability to Examine All Transactions (within time range or location, any leaving specific company or arriving at) ---
 
 DELIMITER $$
 
@@ -2306,20 +2227,18 @@ CREATE PROCEDURE TransactionsExamination(
   IN userStartDate DATE,
   IN userEndDate DATE,
   IN userLocation VARCHAR(100),
-  IN userSourceCompany VARCHAR(100),
-  IN userDestinationCompany VARCHAR(100),
-  IN userDistributor VARCHAR(100)
+  IN userSourceCompany VARCHAR(100), -- leaving company
+  IN userDestinationCompany VARCHAR(100), --- arriving company
+  IN userDistributor VARCHAR(100) -- distributing company
 )
 BEGIN
 
-  -- Common date range CTE
   WITH dateRange AS (
     SELECT
       COALESCE(userStartDate, (SELECT MIN(ActualDate) FROM Shipping)) AS startDate,
       COALESCE(userEndDate,   (SELECT MAX(ActualDate) FROM Shipping)) AS endDate
   ),
 
-  -- Shipments matching filters
   shipments AS (
     SELECT
       s.ShipmentID,
@@ -2344,29 +2263,16 @@ BEGIN
       s.PromisedDate,
       s.Quantity
     FROM Shipping s
-    JOIN Company d  ON s.DistributorID      = d.CompanyID
-    JOIN Product p  ON s.ProductID          = p.ProductID
-    JOIN Company cs ON s.SourceCompanyID    = cs.CompanyID
+    JOIN Company d  ON s.DistributorID = d.CompanyID
+    JOIN Product p  ON s.ProductID = p.ProductID
+    JOIN Company cs ON s.SourceCompanyID = cs.CompanyID
     JOIN Company cd ON s.DestinationCompanyID = cd.CompanyID
     JOIN Location ls ON cs.LocationID = ls.LocationID
     JOIN Location ld ON cd.LocationID = ld.LocationID
     CROSS JOIN dateRange dr
-    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate
-      AND (userSourceCompany      IS NULL OR cs.CompanyName = userSourceCompany)
-      AND (userDestinationCompany IS NULL OR cd.CompanyName = userDestinationCompany)
-      AND (userDistributor        IS NULL OR d.CompanyName = userDistributor)
-      AND (
-           userLocation IS NULL
-        OR ls.CountryName   = userLocation
-        OR ls.ContinentName = userLocation
-        OR ls.CityName      = userLocation
-        OR ld.CountryName   = userLocation
-        OR ld.ContinentName = userLocation
-        OR ld.CityName      = userLocation
-      )
+    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate AND (userSourceCompany IS NULL OR cs.CompanyName = userSourceCompany) AND (userDestinationCompany IS NULL OR cd.CompanyName = userDestinationCompany) AND (userDistributor IS NULL OR d.CompanyName = userDistributor) AND (userLocation IS NULL OR ls.CountryName = userLocation OR ls.ContinentName = userLocation OR ls.CityName = userLocation OR ld.CountryName = userLocation OR ld.ContinentName = userLocation OR ld.CityName = userLocation)
   ),
 
-  -- Receivings tied to shipments in the date range and filters
   receivings AS (
     SELECT
       r.ReceivingID,
@@ -2385,13 +2291,9 @@ BEGIN
     JOIN Shipping s ON r.ShipmentID = s.ShipmentID
     JOIN Company c   ON r.ReceiverCompanyID = c.CompanyID
     CROSS JOIN dateRange dr
-    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate
-      AND (userSourceCompany      IS NULL OR s.SourceCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userSourceCompany LIMIT 1))
-      AND (userDestinationCompany IS NULL OR r.ReceiverCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDestinationCompany LIMIT 1))
-      AND (userDistributor        IS NULL OR s.DistributorID = (SELECT CompanyID FROM Company WHERE CompanyName = userDistributor LIMIT 1))
+    WHERE s.ActualDate BETWEEN dr.startDate AND dr.endDate AND (userSourceCompany IS NULL OR s.SourceCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userSourceCompany LIMIT 1)) AND (userDestinationCompany IS NULL OR r.ReceiverCompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDestinationCompany LIMIT 1)) AND (userDistributor IS NULL OR s.DistributorID = (SELECT CompanyID FROM Company WHERE CompanyName = userDistributor LIMIT 1))
   ),
 
-  -- Inventory adjustments in date range
   adjustments AS (
     SELECT
       a.AdjustmentID,
@@ -2407,13 +2309,9 @@ BEGIN
     JOIN Company c ON a.CompanyID = c.CompanyID
     JOIN Product p ON a.ProductID = p.ProductID
     CROSS JOIN dateRange dr
-    WHERE a.AdjustmentDate BETWEEN dr.startDate AND dr.endDate
-      AND (userSourceCompany      IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userSourceCompany LIMIT 1))
-      AND (userDestinationCompany IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDestinationCompany LIMIT 1))
-      AND (userDistributor        IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDistributor LIMIT 1))
+    WHERE a.AdjustmentDate BETWEEN dr.startDate AND dr.endDate AND (userSourceCompany IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userSourceCompany LIMIT 1)) AND (userDestinationCompany IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDestinationCompany LIMIT 1)) AND (userDistributor IS NULL OR a.CompanyID = (SELECT CompanyID FROM Company WHERE CompanyName = userDistributor LIMIT 1))
   ),
 
-  -- Shipment status derived from shipments
   statusOfShipments AS (
     SELECT
       s.*,
@@ -2426,7 +2324,6 @@ BEGIN
     FROM shipments s
   ),
 
-  -- Products handled per distributor (aggregated)
   productsHandled AS (
     SELECT
       s.DistributorID,
@@ -2443,7 +2340,6 @@ BEGIN
     GROUP BY s.DistributorID, s.DistributorName, s.ProductID, s.ProductName, s.Category, sp.SupplyPrice
   ),
 
-  -- Disruption exposure per distributor (assumes DisruptionEvent.EventDate and ImpactsCompany.ImpactLevel exist)
   findDisruptionExposure AS (
     SELECT
       d.CompanyID,
@@ -2458,12 +2354,11 @@ BEGIN
     GROUP BY d.CompanyID, d.CompanyName
   )
 
-  -- Final combined transaction view (normalized columns so UNION works)
-  SELECT
+  SELECT 
     'Shipping' AS TransactionType,
-    s.ShipmentID           AS ShipmentID,
-    NULL                   AS ReceivingID,
-    NULL                   AS AdjustmentID,
+    s.ShipmentID AS ShipmentID,
+    NULL AS ReceivingID,
+    NULL AS AdjustmentID,
     s.DistributorID,
     s.DistributorName,
     s.ProductID,
@@ -2473,11 +2368,11 @@ BEGIN
     s.DestinationCompanyID,
     s.DestinationCompany,
     s.ActualDate AS EventDate,
-    NULL         AS ReceivedDate,
-    NULL         AS AdjustmentDate,
-    s.Quantity   AS Quantity,
-    NULL         AS QuantityReceived,
-    NULL         AS QuantityChange,
+    NULL AS ReceivedDate,
+    NULL AS AdjustmentDate,
+    s.Quantity AS Quantity,
+    NULL AS QuantityReceived,
+    NULL AS QuantityChange,
     s.DeliveryStatus,
     s.daysDelayed
   FROM statusOfShipments s
@@ -2488,23 +2383,23 @@ BEGIN
     'Receiving' AS TransactionType,
     r.ShipmentID,
     r.ReceivingID,
-    NULL,
+    NULL, -- adjustment ID
     r.DistributorID,
-    NULL,
+    NULL, -- no distributor name in the receiving table
     r.ProductID,
-    NULL,
+    NULL, -- no product name in the receiving table
     r.SourceCompanyID,
-    NULL,
+    NULL, -- no source company name in the receiving table
     r.DestinationCompanyID,
-    NULL,
+    NULL, -- no destination company name in the receiving table
     r.ActualDate AS EventDate,
     r.ReceivedDate,
-    NULL,
-    NULL,
+    NULL, -- no adjustment date
+    NULL, -- no adjustment quantity
     r.QuantityReceived,
-    NULL,
-    NULL,
-    NULL
+    NULL, -- adjustment quantity change
+    NULL, -- DeliveryStatus
+    NULL -- daysDelayed
   FROM receivings r
 
   UNION ALL
@@ -2522,8 +2417,8 @@ BEGIN
     a.AdjustmentDate AS EventDate,
     NULL, -- ReceivedDate
     a.AdjustmentDate AS AdjustmentDate,
-    NULL, -- Quantity (shipment)
-    NULL, -- QuantityReceived
+    NULL, -- Quantity Shipped
+    NULL, -- Quantity Received
     a.QuantityChange,
     NULL, -- DeliveryStatus
     NULL  -- daysDelayed
