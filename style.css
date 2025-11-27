@@ -292,6 +292,23 @@
     border-radius: 10px;
 }
 
+.trend-note {
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.08);
+    color: #c7d2fe;
+    font-size: 0.9rem;
+}
+
+.trend-note.error {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(127, 29, 29, 0.18);
+    color: #fecdd3;
+}
+
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
