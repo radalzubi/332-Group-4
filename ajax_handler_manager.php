@@ -27,6 +27,9 @@ switch($action) {
     case 'getNetworkOverview':
         getNetworkOverview($conn);
         break;
+    case 'getDisruptionTrend':
+        getDisruptionTrend($conn);
+        break;
     default:
         echo json_encode(array('error' => 'Invalid action: ' . $action));
         break;
