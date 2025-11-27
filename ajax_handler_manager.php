@@ -127,6 +127,47 @@ function getFinancialHealth($conn) {
     echo json_encode($response);
 }
 
+// DISRUPTION TREND OVER TIME
+function getDisruptionTrend($conn) {
+    $response = array('success' => true, 'data' => array());
+
+    if (!$conn || $conn->connect_error) {
+        echo json_encode($response);
+        return;
+    }
+
+    $startDate = isset($_POST['start_date']) ? $_POST['start_date'] : '2019-01-01';
+    $endDate   = isset($_POST['end_date'])   ? $_POST['end_date']   : '2025-12-31';
+
+    // Group disruption events by month to show frequency over time
+    $sql = "SELECT
+            DATE_FORMAT(d.EventDate, '%Y-%m-01') as Period,
+            COUNT(*) as TotalEvents,
+            SUM(CASE WHEN d.CategoryID = 1 THEN 1 ELSE 0 END) as HighImpact,
+            SUM(CASE WHEN d.CategoryID = 2 THEN 1 ELSE 0 END) as MediumImpact,
+            SUM(CASE WHEN d.CategoryID = 3 THEN 1 ELSE 0 END) as LowImpact
+            FROM DisruptionEvent d
+            WHERE d.EventDate BETWEEN '$startDate' AND '$endDate'
+            GROUP BY Period
+            ORDER BY Period ASC";
+
+    $result = @$conn->query($sql);
+
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $response['data'][] = array(
+                'period' => $row['Period'],
+                'total' => intval($row['TotalEvents']),
+                'high' => intval(isset($row['HighImpact']) ? $row['HighImpact'] : 0),
+                'medium' => intval(isset($row['MediumImpact']) ? $row['MediumImpact'] : 0),
+                'low' => intval(isset($row['LowImpact']) ? $row['LowImpact'] : 0)
+            );
+        }
+    }
+
+    echo json_encode($response);
+}
+
 // REGIONAL DISRUPTIONS - Using your actual tables
 function getRegionalDisruptions($conn) {
     $response = array('success' => true, 'data' => array());
