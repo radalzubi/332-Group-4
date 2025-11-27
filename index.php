@@ -386,6 +386,20 @@ if ($page === 'scm' && $role !== 'scm') {
                     <div class="loading">Click Analyze to load data...</div>
                 </div>
             </div>
+            
+            <div class="panel">
+                <h2>Disruption Frequency</h2>
+                <div class="date-range-controls">
+                    <label>From:</label>
+                    <input type="date" id="disruption-start-date" value="2019-01-01">
+                    <label>To:</label>
+                    <input type="date" id="disruption-end-date" value="2025-12-31">
+                    <button onclick="loadDisruptionTrend()" class="btn-load">Plot Trend</button>
+                </div>
+                <div id="disruption-trend-display" style="margin-top: 15px;">
+                    <div class="loading">Use the date filters to plot disruption frequency...</div>
+                </div>
+            </div>
 
             <div class="panel">
                 <h2>Regional Disruptions</h2>
@@ -552,7 +566,90 @@ if ($page === 'scm' && $role !== 'scm') {
             display.innerHTML = '<div style="color: #ef4444;">Error loading regional data</div>';
         }
     }
+// Disruption Frequency over Time - NEW
+    async function loadDisruptionTrend() {
+        const display = document.getElementById('disruption-trend-display');
+        if (!display) return;
 
+        const startDate = document.getElementById('disruption-start-date');
+        const endDate = document.getElementById('disruption-end-date');
+
+        display.innerHTML = '<div class="loading">Plotting disruption frequency...</div>';
+
+        const result = await managerFetch('getDisruptionTrend', {
+            start_date: startDate ? startDate.value : '2019-01-01',
+            end_date: endDate ? endDate.value : '2025-12-31'
+        });
+
+        if (result.success && result.data && result.data.length > 0) {
+            display.innerHTML = renderDisruptionTrendChart(result.data);
+        } else if (result.success) {
+            display.innerHTML = '<div style="color: #9ca3af;">No disruptions found for the selected range.</div>';
+        } else {
+            display.innerHTML = '<div style="color: #ef4444;">Error loading trend: ' + (result.error || 'Unknown error') + '</div>';
+        }
+    }
+
+    function renderDisruptionTrendChart(data) {
+        const width = 620;
+        const height = 260;
+        const padding = 45;
+        const maxCount = Math.max.apply(null, data.map(item => item.total || 0).concat([1]));
+
+        const xStep = (width - padding * 2) / Math.max(data.length - 1, 1);
+        const yScale = (height - padding * 2) / maxCount;
+
+        const points = data.map((item, idx) => {
+            const x = padding + idx * xStep;
+            const y = height - padding - ((item.total || 0) * yScale);
+            return { x, y, label: item.period };
+        });
+
+        const linePath = points.reduce((path, pt, idx) => {
+            const command = idx === 0 ? 'M' : 'L';
+            return path + `${command}${pt.x},${pt.y} `;
+        }, '');
+
+        const areaPath = `${linePath}L${points[points.length - 1].x},${height - padding} L${points[0].x},${height - padding} Z`;
+
+        const totalEvents = data.reduce((sum, row) => sum + (row.total || 0), 0);
+        const high = data.reduce((sum, row) => sum + (row.high || 0), 0);
+        const medium = data.reduce((sum, row) => sum + (row.medium || 0), 0);
+        const low = data.reduce((sum, row) => sum + (row.low || 0), 0);
+
+        const axisTicks = data.map((item, idx) => {
+            const dateLabel = item.period ? new Date(item.period).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '';
+            const x = padding + idx * xStep;
+            return `<g>
+                        <line x1="${x}" y1="${height - padding}" x2="${x}" y2="${height - padding + 6}" stroke="#4b5563" />
+                        <text x="${x}" y="${height - padding + 20}" text-anchor="middle" fill="#9ca3af" font-size="10">${dateLabel}</text>
+                    </g>`;
+        }).join('');
+
+        return `
+            <div style="display:flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                <div style="padding:10px 14px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.35); border-radius: 8px; color:#e5e7eb;">
+                    <div style="font-size: 1.6em; font-weight: 700; color: #60a5fa;">${totalEvents}</div>
+                    <div style="font-size: 0.85em; color: #9ca3af;">Total disruptions</div>
+                </div>
+                <div style="padding:10px 14px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35); border-radius: 8px; color:#ef4444;">High: ${high}</div>
+                <div style="padding:10px 14px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.35); border-radius: 8px; color:#f59e0b;">Medium: ${medium}</div>
+                <div style="padding:10px 14px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.35); border-radius: 8px; color:#22c55e;">Low: ${low}</div>
+            </div>
+            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: radial-gradient(circle at 20% 20%, rgba(59,130,246,0.08), rgba(17,24,39,0.9)); border: 1px solid #1f2937; border-radius: 10px;">
+                <g>
+                    <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
+                    <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
+                    ${axisTicks}
+                </g>
+                <path d="${areaPath}" fill="rgba(59,130,246,0.15)" stroke="none"></path>
+                <path d="${linePath}" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                ${points.map(pt => `<circle cx="${pt.x}" cy="${pt.y}" r="4" fill="#8b5cf6" stroke="#c084fc" stroke-width="1.5"></circle>`).join('')}
+                ${points.map(pt => `<text x="${pt.x}" y="${pt.y - 10}" text-anchor="middle" fill="#e5e7eb" font-size="10">${Math.round((height - padding - pt.y) / yScale)}↑</text>`).join('')}
+            </svg>
+        `;
+    }
+        
     // Critical Companies - COMPLETE
     async function loadCriticalCompanies() {
         const display = document.getElementById('critical-companies-display');
@@ -664,6 +761,9 @@ if ($page === 'scm' && $role !== 'scm') {
     window.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('network-overview-display')) {
             setTimeout(loadNetworkOverview, 500);
+        }
+        if (document.getElementById('disruption-trend-display')) {
+            setTimeout(loadDisruptionTrend, 700);
         }
     });
     </script>
