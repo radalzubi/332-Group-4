@@ -566,6 +566,7 @@ if ($page === 'scm' && $role !== 'scm') {
             display.innerHTML = '<div style="color: #ef4444;">Error loading regional data</div>';
         }
     }
+        
 // Disruption Frequency over Time - NEW
     async function loadDisruptionTrend() {
         const display = document.getElementById('disruption-trend-display');
@@ -583,11 +584,23 @@ if ($page === 'scm' && $role !== 'scm') {
 
         if (result.success && result.data && result.data.length > 0) {
             display.innerHTML = renderDisruptionTrendChart(result.data);
-        } else if (result.success) {
-            display.innerHTML = '<div style="color: #9ca3af;">No disruptions found for the selected range.</div>';
-        } else {
-            display.innerHTML = '<div style="color: #ef4444;">Error loading trend: ' + (result.error || 'Unknown error') + '</div>';
+            return;
         }
+
+        // If nothing comes back (or the DB isn't reachable), show a helpful note and demo trend
+        const fallback = [
+            { period: '2024-01-01', total: 3, high: 1, medium: 1, low: 1 },
+            { period: '2024-02-01', total: 5, high: 2, medium: 2, low: 1 },
+            { period: '2024-03-01', total: 2, high: 0, medium: 1, low: 1 },
+            { period: '2024-04-01', total: 6, high: 2, medium: 3, low: 1 },
+            { period: '2024-05-01', total: 4, high: 1, medium: 2, low: 1 }
+        ];
+
+        const headline = result.success
+            ? '<div class="trend-note">No disruptions returned for this range. Showing a demo trend so the panel is not empty.</div>'
+            : '<div class="trend-note error">Unable to reach the database right now. Showing a demo trend instead.</div>';
+
+        display.innerHTML = headline + renderDisruptionTrendChart(fallback);
     }
 
     function renderDisruptionTrendChart(data) {
@@ -627,16 +640,16 @@ if ($page === 'scm' && $role !== 'scm') {
         }).join('');
 
         return `
-            <div style="display:flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
-                <div style="padding:10px 14px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.35); border-radius: 8px; color:#e5e7eb;">
-                    <div style="font-size: 1.6em; font-weight: 700; color: #60a5fa;">${totalEvents}</div>
-                    <div style="font-size: 0.85em; color: #9ca3af;">Total disruptions</div>
+            <div class="trend-summary">
+                <div class="trend-chip total">
+                    <div class="trend-value">${totalEvents}</div>
+                    <div class="trend-label">Total disruptions</div>
                 </div>
-                <div style="padding:10px 14px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35); border-radius: 8px; color:#ef4444;">High: ${high}</div>
-                <div style="padding:10px 14px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.35); border-radius: 8px; color:#f59e0b;">Medium: ${medium}</div>
-                <div style="padding:10px 14px; background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.35); border-radius: 8px; color:#22c55e;">Low: ${low}</div>
+                <div class="trend-chip high">High: ${high}</div>
+                <div class="trend-chip medium">Medium: ${medium}</div>
+                <div class="trend-chip low">Low: ${low}</div>
             </div>
-            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: radial-gradient(circle at 20% 20%, rgba(59,130,246,0.08), rgba(17,24,39,0.9)); border: 1px solid #1f2937; border-radius: 10px;">
+            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
                 <g>
                     <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
                     <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
