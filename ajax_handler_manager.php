@@ -1,5 +1,5 @@
 <?php
-// ajax_handler_manager_correct.php - Works with YOUR actual database structure
+// ajax_handler_manager_correct.php 
 session_start();
 
 // Database connection
@@ -35,7 +35,7 @@ switch($action) {
         break;
 }
 
-// FINANCIAL HEALTH - Using HealthScore from your actual table
+// FINANCIAL HEALTH - HealthScore from FinancialReport table
 function getFinancialHealth($conn) {
     $response = array('success' => true, 'data' => array());
     
@@ -168,7 +168,7 @@ function getDisruptionTrend($conn) {
     echo json_encode($response);
 }
 
-// REGIONAL DISRUPTIONS - Using your actual tables
+// REGIONAL DISRUPTIONS 
 function getRegionalDisruptions($conn) {
     $response = array('success' => true, 'data' => array());
     
@@ -254,7 +254,7 @@ function getRegionalDisruptions($conn) {
     echo json_encode($response);
 }
 
-// CRITICAL COMPANIES - Using your actual DependsOn and ImpactsCompany
+// CRITICAL COMPANIES - Using DependsOn and ImpactsCompany
 function getCriticalCompanies($conn) {
     $response = array('success' => true, 'data' => array());
     
