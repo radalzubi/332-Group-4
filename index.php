@@ -1,38 +1,29 @@
 <?php
-// -----------------------------------------
-// START SESSION
-// -----------------------------------------
+
 session_start();
 
-// -----------------------------------------
-// DATABASE CONNECTION (for non-AJAX content)
-// -----------------------------------------
+// Database Connection
 $servername = "localhost";
 $db_user    = "your_db_user";
-$db_pass    = "your_db_password";  // Your password
+$db_pass    = "your_db_password";
 $db_name    = "your_db_name";
-
 $conn = @new mysqli($servername, $db_user, $db_pass, $db_name);
 
 $db_connected = true;
 if (!$conn || $conn->connect_error) {
     $db_connected = false;
-    error_log("Database connection failed: " . ($conn ? $conn->connect_error : "Unknown error"));
+    error_log("Database connection failed: " . ($conn ? $conn->connect_error : "Please retry connection"));
 }
 
-// -----------------------------------------
-// ROUTER - PHP 5.4 Compatible
-// -----------------------------------------
+// Login page
 $page = isset($_GET['page']) ? $_GET['page'] : 'login';
 
-// -----------------------------------------
-// HANDLE LOGIN SUBMIT
-// -----------------------------------------
+// Login entry
 if ($page === 'do_login') {
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
     $password = isset($_POST['password']) ? trim($_POST['password']) : '';
 
-    // Demo login logic - PROPERLY SEPARATED
+    // USERNAMES & PASSWORDS
     if ($username === 'manager' && $password === '123') {
         $_SESSION['role'] = 'senior';
         $_SESSION['username'] = 'manager';
@@ -50,9 +41,7 @@ if ($page === 'do_login') {
     exit();
 }
 
-// -----------------------------------------
-// HANDLE LOGOUT
-// -----------------------------------------
+// Logout option
 if ($page === 'logout') {
     session_unset();
     session_destroy();
@@ -60,12 +49,9 @@ if ($page === 'logout') {
     exit();
 }
 
-// -----------------------------------------
-// SECURITY CHECK
-// -----------------------------------------
+// Security check
 $role = isset($_SESSION['role']) ? $_SESSION['role'] : null;
 
-// Prevent unauthorized access
 if ($page === 'erp' && $role !== 'senior') {
     header("Location: index.php?page=login");
     exit();
@@ -77,16 +63,20 @@ if ($page === 'scm' && $role !== 'scm') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
+
+<!--Front-end display-->
+
 <head>
     <meta charset="UTF-8">
-    <title>ERP System</title>
-    <link rel="stylesheet" href="style.css">
+    <title>ERP System</title> 
+    <link rel="stylesheet" href="style.css"> <!--connects to style.css for additional graphics-->
     <style>
-        /* Additional styles for AJAX components */
         .kpi-section {
             margin-top: 20px;
         }
-        
+
+        /* User input date module */
         .date-range-controls {
             background: rgba(31, 41, 55, 0.5);
             padding: 15px;
@@ -114,6 +104,7 @@ if ($page === 'scm' && $role !== 'scm') {
             font-size: 0.9rem;
         }
         
+        /* Buttons that load data */
         .btn-load {
             padding: 8px 20px;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
@@ -125,11 +116,13 @@ if ($page === 'scm' && $role !== 'scm') {
             transition: all 0.3s;
         }
         
+        /* glow effect */
         .btn-load:hover {
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
-        
+
+        /* autofits each panel */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -185,20 +178,21 @@ if ($page === 'scm' && $role !== 'scm') {
             margin: 10px 0;
         }
 
-        .search-section {
+        /* Company search box */
+        .company-search {
             background: rgba(31, 41, 55, 0.5);
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
         }
         
-        .search-box {
+        .company-search-box {
             display: flex;
             gap: 10px;
             margin-top: 10px;
         }
         
-        .search-box input {
+        .company-search-box input {
             flex: 1;
             padding: 10px;
             border-radius: 5px;
@@ -207,7 +201,7 @@ if ($page === 'scm' && $role !== 'scm') {
             color: #f9fafb;
         }
         
-        .btn-search {
+        .btn-company-search {
             padding: 10px 20px;
             background: #4b5563;
             color: white;
@@ -216,7 +210,7 @@ if ($page === 'scm' && $role !== 'scm') {
             cursor: pointer;
         }
         
-        .btn-search:hover {
+        .btn-company-search:hover {
             background: #6b7280;
         }
         
@@ -254,7 +248,7 @@ if ($page === 'scm' && $role !== 'scm') {
             overflow-y: auto;
         }
         
-        .alert-item {
+        .alerts-item {
             display: flex;
             gap: 10px;
             padding: 12px;
@@ -296,7 +290,7 @@ if ($page === 'scm' && $role !== 'scm') {
 
 <?php if ($page === 'login'): ?>
 
-    <!-- LOGIN PAGE -->
+    <!-- LOGIN PAGE DISPLAY -->
     <div class="card" id="login-card">
         <header class="card-header">
             <h1 class="app-title">Group ERP Portal</h1>
@@ -341,7 +335,7 @@ if ($page === 'scm' && $role !== 'scm') {
         <form id="login-form" class="form" action="index.php?page=do_login" method="POST">
             <div class="form-field">
                 <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="e.g. manager">
+                <input type="text" id="username" name="username" placeholder="Your username">
             </div>
 
             <div class="form-field">
@@ -352,7 +346,8 @@ if ($page === 'scm' && $role !== 'scm') {
             <button type="submit" class="btn-primary">Login</button>
 
             <p class="hint">
-                Demo: <code>manager / 123</code> (Senior Manager) • <code>supply / 123</code> (Supply Chain Manager)
+                For senior manager, enter: <code>manager </code>-><code> 123</code>  || 
+                For supply chain manager, enter: <code>supply </code>-><code> 123</code> 
             </p>
         </form>
     </div>
@@ -364,15 +359,30 @@ if ($page === 'scm' && $role !== 'scm') {
         <header class="card-header horizontal">
             <div>
                 <h1 class="app-title">Senior Manager Dashboard</h1>
-                <p class="app-subtitle">Financial health, disruptions, and network overview.</p>
+                <p class="app-subtitle">Overview, Health, & More</p>
             </div>
             <nav class="top-nav">
-                <a href="index.php?page=erp" class="nav-link active">Overview</a>
+                <!-- <a href="index.php?page=erp" class="nav-link active">Overview</a> -->
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
             </nav>
         </header>
 
+        <!-- DISPLAY PANELS -->
         <section class="grid">
+            <!-- Network overview panel -->
+             <div class="panel">
+                <h2>Network Overview</h2>
+                <button onclick="loadNetworkOverview()" class="btn-load">Refresh Overview</button>
+                <div id="network-overview-display" style="margin-top: 15px;"></div>
+            </div>
+            
+            <script> // Auto load network overview panel
+                window.addEventListener('DOMContentLoaded', function() {
+                    if (document.getElementById('network-overview-display')) {
+                     setTimeout(loadNetworkOverview, 500);
+                    } }); </script>
+
+            <!-- Financial health panel -->
             <div class="panel">
                 <h2>Financial Health</h2>
                 <div class="date-range-controls">
@@ -380,13 +390,32 @@ if ($page === 'scm' && $role !== 'scm') {
                     <input type="date" id="finance-start-date" value="2020-01-01">
                     <label>To:</label>
                     <input type="date" id="finance-end-date" value="2025-12-31">
-                    <button onclick="loadFinancialHealth()" class="btn-load">Analyze</button>
+                    <button onclick="loadFinancialHealth()" class="btn-load">View</button>
                 </div>
                 <div id="financial-health-display" style="margin-top: 15px;">
-                    <div class="loading">Click Analyze to load data...</div>
+                    <div class="loading">Enter desired timeframe and click "View" to see data.</div>
                 </div>
             </div>
-            
+
+            <!-- Regional disruption overview panel -->
+            <div class="panel">
+                <h2>Regional Disruptions</h2>
+                <button onclick="loadRegionalDisruptions()" class="btn-load">View</button>
+                <div id="regional-disruptions-display" style="margin-top: 15px;">
+                    <div class="loading">Click "View" to see data</div>
+                </div>
+            </div>
+
+            <!-- Most critical companies panel -->
+            <div class="panel">
+                <h2>Critical Companies</h2>
+                <button onclick="loadCriticalCompanies()" class="btn-load">View</button>
+                <div id="critical-companies-display" style="margin-top: 15px;">
+                    <div class="loading">Click "View" to see critical companies, from most critical to least critical.</div>
+                </div>
+            </div>
+
+            <!-- Disruption frequency over time panel -->
             <div class="panel">
                 <h2>Disruption Frequency</h2>
                 <div class="date-range-controls">
@@ -394,36 +423,65 @@ if ($page === 'scm' && $role !== 'scm') {
                     <input type="date" id="disruption-start-date" value="2019-01-01">
                     <label>To:</label>
                     <input type="date" id="disruption-end-date" value="2025-12-31">
-                    <button onclick="loadDisruptionTrend()" class="btn-load">Plot Trend</button>
+                    <button onclick="loadDisruptionTrend()" class="btn-load">View</button>
                 </div>
+
                 <div id="disruption-trend-display" style="margin-top: 15px;">
-                    <div class="loading">Use the date filters to plot disruption frequency...</div>
+                    <div class="loading">Enter desired timeframe and click "View" to see data.</div>
                 </div>
             </div>
 
+            <!-- Company financials by region panel -->
             <div class="panel">
-                <h2>Regional Disruptions</h2>
-                <button onclick="loadRegionalDisruptions()" class="btn-load">Load Regional Data</button>
-                <div id="regional-disruptions-display" style="margin-top: 15px;">
-                    <div class="loading">Click to view regional data...</div>
+                <h2>Company Financials</h2>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="company-search" placeholder="Sort by company name or ID">
+                        <button onclick="searchCompany()" class="btn-company-search">Search</button>
+                    </div>
+                    <div id="company-results"></div>
+                </div>
+
+                <div id="" style="margin-top: 15px;">
+                    <div class="loading">Search company financial reports by name or ID, sorted by region.</div>
                 </div>
             </div>
 
+            <!-- Top distributors by shipment volume panel -->
             <div class="panel">
-                <h2>Critical Companies</h2>
-                <button onclick="loadCriticalCompanies()" class="btn-load">Identify Critical Nodes</button>
-                <div id="critical-companies-display" style="margin-top: 15px;">
-                    <div class="loading">Click to identify critical companies...</div>
-                </div>
+                <h2>Top Distributors</h2>
             </div>
 
+            <!-- Companies affected by disruption event panel -->
             <div class="panel">
-                <h2>Network Overview</h2>
-                <button onclick="loadNetworkOverview()" class="btn-load">Refresh Overview</button>
-                <div id="network-overview-display" style="margin-top: 15px;">
-                    <div class="loading">Click to load network stats...</div>
-                </div>
+                <h2>Companies Affected by Disruption Event</h2>
             </div>
+
+            <!-- All disruptions for specific company panel -->
+            <div class="panel">
+                <h2>All Disruptions by Company</h2>
+            </div>
+
+            <!-- Distributors sorted by average delay panel -->
+            <div class="panel">
+                <h2>Distributor Average Delay (Days)</h2>
+            </div>
+
+            <!-- Adding a new company panel -->
+            <div class="panel">
+                <h2>Add a New Company</h2>
+            </div>
+
+            <!-- Nontrivial plot 1 panel-->
+            <div class="panel">
+                <h2>Nontrivial Plot 1</h2>
+            </div>
+
+            <!-- Nontrivial plot 2 panel -->
+            <div class="panel">
+                <h2>Nontrivial Plot 2</h2>
+            </div>
+
         </section>
     </div>
 
@@ -769,16 +827,6 @@ if ($page === 'scm' && $role !== 'scm') {
             display.innerHTML = '<div style="color: #ef4444;">Error loading network overview: ' + (result.error || 'Unknown error') + '</div>';
         }
     }
-    
-    // Auto-load network overview when page loads
-    window.addEventListener('DOMContentLoaded', function() {
-        if (document.getElementById('network-overview-display')) {
-            setTimeout(loadNetworkOverview, 500);
-        }
-        if (document.getElementById('disruption-trend-display')) {
-            setTimeout(loadDisruptionTrend, 700);
-        }
-    });
     </script>
 
 <?php elseif ($page === 'scm' && $role === 'scm'): ?>
@@ -799,10 +847,10 @@ if ($page === 'scm' && $role !== 'scm') {
         <section class="grid">
             <div class="panel">
                 <h2>Company Info</h2>
-                <div class="search-section" style="background: transparent; padding: 10px 0;">
-                    <div class="search-box">
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
                         <input type="text" id="company-search" placeholder="Enter company name...">
-                        <button onclick="searchCompany()" class="btn-search">Search</button>
+                        <button onclick="searchCompany()" class="btn-company-search">Search</button>
                     </div>
                     <div id="company-results"></div>
                 </div>
