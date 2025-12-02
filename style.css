@@ -218,6 +218,10 @@
     }
 }
 
+.panel-top {
+    grid-column: 1 / -1
+}
+
 .panel {
     border-radius: 14px;
     background: radial-gradient(circle at top left, #111827 0, #020617 55%);
@@ -237,77 +241,6 @@
     font-size: 0.86rem;
     color: #9ca3af;
 }
-
-/* Disruption trend chart */
-.trend-summary {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-}
-
-.trend-chip {
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid rgba(59, 130, 246, 0.25);
-    background: rgba(59, 130, 246, 0.1);
-    color: #e5e7eb;
-    font-size: 0.9rem;
-}
-
-.trend-chip.total .trend-value {
-    font-size: 1.6em;
-    font-weight: 700;
-    color: #60a5fa;
-}
-
-.trend-chip.total .trend-label {
-    font-size: 0.85em;
-    color: #9ca3af;
-    margin-top: 2px;
-}
-
-.trend-chip.high {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: rgba(239, 68, 68, 0.35);
-    color: #fca5a5;
-}
-
-.trend-chip.medium {
-    background: rgba(245, 158, 11, 0.08);
-    border-color: rgba(245, 158, 11, 0.35);
-    color: #fcd34d;
-}
-
-.trend-chip.low {
-    background: rgba(34, 197, 94, 0.08);
-    border-color: rgba(34, 197, 94, 0.35);
-    color: #86efac;
-}
-
-.trend-chart {
-    background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08), rgba(17, 24, 39, 0.9));
-    border: 1px solid #1f2937;
-    border-radius: 10px;
-}
-
-.trend-note {
-    margin-bottom: 8px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(59, 130, 246, 0.35);
-    background: rgba(59, 130, 246, 0.08);
-    color: #c7d2fe;
-    font-size: 0.9rem;
-}
-
-.trend-note.error {
-    border-color: rgba(239, 68, 68, 0.35);
-    background: rgba(127, 29, 29, 0.18);
-    color: #fecdd3;
-}
-
 
 /* Animations */
 @keyframes fadeIn {
