@@ -1,0 +1,11 @@
+DATE	PERSON	COMMENT	
+	Rad	data loading buttons work when clicked, nothing happens if no data available
+	Rad	an error message appears now if there is no available data
+	Ryder	created company search bar, allows an interactive typing space
+	Ryder	created company financials panel, searching doesn't bring up queries
+
+
+Need to make AI explanation videos in the following areas:
+
+Within index.php:
+	Starting around line 70, the <!--Front-end display-->: Explain how the panels, buttons, and search fields were generated and why
