@@ -362,18 +362,24 @@ if ($page === 'scm' && $role !== 'scm') {
                 <p class="app-subtitle">Overview, Health, & More</p>
             </div>
             <nav class="top-nav">
-                <!-- <a href="index.php?page=erp" class="nav-link active">Overview</a> -->
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
             </nav>
         </header>
 
         <!-- DISPLAY PANELS -->
         <section class="grid">
-            <!-- Network overview panel -->
-             <div class="panel">
-                <h2>Network Overview</h2>
-                <button onclick="loadNetworkOverview()" class="btn-load">Refresh Overview</button>
+            <!-- General info panel -->
+             <div class="panel-top">
+                <div class="company-search" style="background: transparent; padding: 0px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="company-search" placeholder="Find specific info by company or company ID">
+                        <button onclick="filterCompany()" class="btn-company-search">Search</button>
+                    </div>
+                    <div id="company-results"></div>
+                </div>
+
                 <div id="network-overview-display" style="margin-top: 15px;"></div>
+                
             </div>
             
             <script> // Auto load network overview panel
