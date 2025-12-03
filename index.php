@@ -385,7 +385,7 @@ if ($page === 'scm' && $role !== 'scm') {
             <script> // Auto load network overview panel
                 window.addEventListener('DOMContentLoaded', function() {
                     if (document.getElementById('network-overview-display')) {
-                     setTimeout(loadNetworkOverview, 500);
+                     setTimeout(getNetworkOverview, 500);
                     } }); </script>
 
             <!-- Financial health panel -->
@@ -396,7 +396,7 @@ if ($page === 'scm' && $role !== 'scm') {
                     <input type="date" id="finance-start-date" value="2020-01-01">
                     <label>To:</label>
                     <input type="date" id="finance-end-date" value="2025-12-31">
-                    <button onclick="loadFinancialHealth()" class="btn-load">View</button>
+                    <button onclick="avgFinancialHealth()" class="btn-load">View</button>
                 </div>
                 <div id="financial-health-display" style="margin-top: 15px;">
                     <div class="loading">Enter desired timeframe and click "View" to see data.</div>
@@ -406,7 +406,7 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Regional disruption overview panel -->
             <div class="panel">
                 <h2>Regional Disruptions</h2>
-                <button onclick="loadRegionalDisruptions()" class="btn-load">View</button>
+                <button onclick="regionalDisruptionOverview()" class="btn-load">View</button>
                 <div id="regional-disruptions-display" style="margin-top: 15px;">
                     <div class="loading">Click "View" to see data</div>
                 </div>
@@ -415,7 +415,7 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Most critical companies panel -->
             <div class="panel">
                 <h2>Critical Companies</h2>
-                <button onclick="loadCriticalCompanies()" class="btn-load">View</button>
+                <button onclick="mostCriticalCompanies()" class="btn-load">View</button>
                 <div id="critical-companies-display" style="margin-top: 15px;">
                     <div class="loading">Click "View" to see critical companies, from most critical to least critical.</div>
                 </div>
@@ -429,7 +429,7 @@ if ($page === 'scm' && $role !== 'scm') {
                     <input type="date" id="disruption-start-date" value="2019-01-01">
                     <label>To:</label>
                     <input type="date" id="disruption-end-date" value="2025-12-31">
-                    <button onclick="loadDisruptionTrend()" class="btn-load">View</button>
+                    <button onclick="disruptionFrequency()" class="btn-load">View</button>
                 </div>
 
                 <div id="disruption-trend-display" style="margin-top: 15px;">
@@ -491,7 +491,7 @@ if ($page === 'scm' && $role !== 'scm') {
         </section>
     </div>
 
-    <!-- Senior Manager JavaScript - COMPLETE VERSION -->   CURRENTLY WORKS BUT NOT FULLY CORRECT FROM PROJECT REQs
+    <!-- Senior Manager JavaScript - COMPLETE VERSION -->
     <script>
     // Manager-specific fetch function that handles errors properly
     async function managerFetch(action, data = {}) {
@@ -500,7 +500,7 @@ if ($page === 'scm' && $role !== 'scm') {
             formData.append('action', action);
             Object.keys(data).forEach(key => formData.append(key, data[key]));
             
-            const response = await fetch('ajax_handler_manager.php', {
+            const response = await fetch('ajax_handler_senior_managers.php', {
                 method: 'POST',
                 body: formData
             });
@@ -520,69 +520,80 @@ if ($page === 'scm' && $role !== 'scm') {
         }
     }
 
-    // Financial Health - COMPLETE, WORKS BUT PARTLY WRONG FROM OLD AJAX NOT CORRECTED
-    async function loadFinancialHealth() {
-        const display = document.getElementById('financial-health-display');
-        if (!display) return;
-        
-        const startDate = document.getElementById('finance-start-date');
-        const endDate = document.getElementById('finance-end-date');
-        
-        display.innerHTML = '<div class="loading">Analyzing financial health...</div>';
-        
-        const result = await managerFetch('getFinancialHealth', {
-            start_date: startDate ? startDate.value : '2020-01-01',
-            end_date: endDate ? endDate.value : '2025-12-31'
-        });
-        
-        if (result.success && result.data) {
-            let html = '<div style="text-align: center; margin-bottom: 20px;">';
-            html += '<div style="font-size: 2.5em; color: #60a5fa; font-weight: bold;">';
-            html += (result.data.avgHealthScore || 0) + '%';
-            html += '</div><div style="color: #9ca3af;">Average Health Score</div></div>';
-            
-            // Top Performers
-            if (result.data.topPerformers && result.data.topPerformers.length > 0) {
-                html += '<h4 style="color: #22c55e; margin-top: 15px;">Top Performers</h4>';
-                html += '<div style="font-size: 0.9em;">';
-                result.data.topPerformers.slice(0, 3).forEach(function(company) {
-                    html += '<div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #374151;">';
-                    html += '<span>' + (company.CompanyName || 'Unknown') + '</span>';
-                    html += '<span style="color: #60a5fa;">' + (company.ProfitMargin || 0) + '%</span>';
-                    html += '</div>';
-                });
-                html += '</div>';
-            }
-            
-            // Bottom Performers
-            if (result.data.bottomPerformers && result.data.bottomPerformers.length > 0) {
-                html += '<h4 style="color: #ef4444; margin-top: 15px;">Need Attention</h4>';
-                html += '<div style="font-size: 0.9em;">';
-                result.data.bottomPerformers.slice(0, 3).forEach(function(company) {
-                    html += '<div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #374151;">';
-                    html += '<span>' + (company.CompanyName || 'Unknown') + '</span>';
-                    html += '<span style="color: #f59e0b;">' + (company.ProfitMargin || 0) + '%</span>';
-                    html += '</div>';
-                });
-                html += '</div>';
-            }
-            
-            display.innerHTML = html;
-        } else {
-            display.innerHTML = '<div style="color: #ef4444;">Error: ' + (result.error || 'Failed to load data') + '</div>';
-        }
+    // Financial Health - COMPLETE
+async function avgFinancialHealth() {
+    const display = document.getElementById('financial-health-display');
+    if (!display) return;
+
+    const startDate = document.getElementById('finance-start-date');
+    const endDate   = document.getElementById('finance-end-date');
+
+    display.innerHTML = '<div class="loading">Analyzing financial health...</div>';
+
+    const result = await managerFetch('avg_financial_health', {
+        startDate: startDate.value,
+        endDate: endDate.value
+    });
+
+    // FIX: your backend returns avg_financial_health, not success/data
+    if (!result || !Array.isArray(result.avg_financial_health)) {
+        display.innerHTML = '<div style="color:#ef4444;">Error loading data</div>';
+        return;
     }
 
-    // Regional Disruptions - COMPLETE, FROM OLD AJAX NOT CORRECTED
-    async function loadRegionalDisruptions() {
+    const rows = result.avg_financial_health;
+
+    // Compute average
+    const avg = rows.reduce((a, c) => a + (c.avgHealthScore || 0), 0) / rows.length;
+
+    // Sort
+    const sorted = [...rows].sort((a, b) => (b.avgHealthScore || 0) - (a.avgHealthScore || 0));
+
+    const top = sorted.slice(0, 3);
+    const bottom = sorted.slice(-3);
+
+    let html = `
+        <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:2.5em;color:#60a5fa;font-weight:bold;">
+                ${avg.toFixed(2)}%
+            </div>
+            <div style="color:#9ca3af;">Average Health Score</div>
+        </div>
+    `;
+
+    html += `<h4 style="color:#22c55e;">Top Performers</h4>`;
+    top.forEach(c => {
+        html += `
+            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding:5px 0">
+                <span>${c.CompanyName}</span>
+                <span style="color:#60a5fa;">${c.avgHealthScore}%</span>
+            </div>`;
+    });
+
+    html += `<h4 style="color:#ef4444;margin-top:15px;">Need Attention</h4>`;
+    bottom.forEach(c => {
+        html += `
+            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding:5px 0">
+                <span>${c.CompanyName}</span>
+                <span style="color:#f59e0b;">${c.avgHealthScore}%</span>
+            </div>`;
+    });
+
+    display.innerHTML = html;
+}
+
+
+
+    // Regional Disruptions - COMPLETE
+    async function regionalDisruptionOverview() {
         const display = document.getElementById('regional-disruptions-display');
         if (!display) return;
         
         display.innerHTML = '<div class="loading">Loading regional data...</div>';
         
-        const result = await managerFetch('getRegionalDisruptions', {
-            start_date: '2020-01-01',
-            end_date: '2025-12-31'
+        const result = await managerFetch('regional_disruption_overview', {
+            startDate: '2020-01-01',
+            endDate: '2025-12-31'
         });
         
         if (result.success && result.data) {
@@ -632,7 +643,7 @@ if ($page === 'scm' && $role !== 'scm') {
     }
         
 // Disruption Frequency over Time - NEW
-    async function loadDisruptionTrend() {
+    async function disruptionFrequency() {
         const display = document.getElementById('disruption-trend-display');
         if (!display) return;
 
@@ -641,9 +652,9 @@ if ($page === 'scm' && $role !== 'scm') {
 
         display.innerHTML = '<div class="loading">Plotting disruption frequency...</div>';
 
-        const result = await managerFetch('getDisruptionTrend', {
-            start_date: startDate ? startDate.value : '2019-01-01',
-            end_date: endDate ? endDate.value : '2025-12-31'
+        const result = await managerFetch('disruption_frequency', {
+            startDate: startDate ? startDate.value : '2019-01-01',
+            endDate: endDate ? endDate.value : '2025-12-31'
         });
 
         if (result.success && result.data && result.data.length > 0) {
@@ -727,14 +738,14 @@ if ($page === 'scm' && $role !== 'scm') {
         `;
     }
         
-    // Critical Companies - COMPLETE, FROM OLD AJAX NOT CORRECTED
-    async function loadCriticalCompanies() {
+    // Critical Companies - COMPLETE
+    async function mostCriticalCompanies() {
         const display = document.getElementById('critical-companies-display');
         if (!display) return;
         
         display.innerHTML = '<div class="loading">Analyzing network criticality...</div>';
         
-        const result = await managerFetch('getCriticalCompanies');
+        const result = await managerFetch('most_critical_companies');
         
         if (result.success && result.data) {
             let html = '<div style="max-height: 300px; overflow-y: auto;">';
@@ -774,14 +785,14 @@ if ($page === 'scm' && $role !== 'scm') {
         }
     }
 
-    // Network Overview - COMPLETE  - WORKS BUT INCORRECT FROM A3 REQs
-    async function loadNetworkOverview() {
+    // Network Overview - COMPLETE
+    async function getNetworkOverview() {
         const display = document.getElementById('network-overview-display');
         if (!display) return;
         
         display.innerHTML = '<div class="loading">Loading network statistics...</div>';
         
-        const result = await managerFetch('getNetworkOverview');
+        const result = await managerFetch('get_network_overview');
         
         if (result.success && result.data) {
             let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">';
