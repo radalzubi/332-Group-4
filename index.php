@@ -920,3 +920,101 @@ if (isset($conn) && $conn && !$conn->connect_error) {
     $conn->close();
 }
 ?>
+<div class="panel">
+    <h2>Financial Health Overview</h2>
+    <div id="financial-health-display"></div>
+</div>
+
+
+<script>
+
+// Financial Health Overview
+
+async function financialHealthOverview() {
+    const display = document.getElementById('financial-health-display');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading financial health overview...</div>';
+    
+
+
+    // Call backend
+    const result = await managerFetch('getFinancialHealth', {
+        start_date: '2020-01-01',
+        end_date: '2025-12-31'
+    });
+
+    // If valid data returned
+    if (result.success && result.data && result.data.topPerformers && result.data.topPerformers.length > 0) {
+        display.innerHTML = renderFinancialHealthChart(result.data.topPerformers);
+        return;
+    }
+
+    // Otherwise use fallback demo
+    const fallback = [
+        { CompanyName: 'Alpha Corp', HealthScore: 82 },
+        { CompanyName: 'Beta Industries', HealthScore: 75 },
+        { CompanyName: 'Gamma Tech', HealthScore: 91 },
+        { CompanyName: 'Delta Supply', HealthScore: 68 },
+        { CompanyName: 'Epsilon LLC', HealthScore: 73 }
+    ];
+
+    const headline = result.success
+        ? '<div class="trend-note">No financial data returned. Showing a demo chart instead.</div>'
+        : '<div class="trend-note error">Database unreachable. Showing a demo chart instead.</div>';
+
+    display.innerHTML = headline + renderFinancialHealthChart(fallback);
+}
+
+// AVG BAR CHART FOR FINANCIAL HEALTH
+function renderFinancialHealthChart(data) {
+    const width = 470;
+    const height = 260;
+    const padding = 20;
+    
+    const maxScore = Math.max.apply(null, data.map(d => d.HealthScore).concat([1]));
+    const barWidth = (width - padding * 2) / data.length - 20;
+    const chartHeight = height - padding * 2;
+    const scale = chartHeight / maxScore;
+
+    const bars = data.map((item, idx) => {
+        const x = padding + idx * (barWidth + 20);
+        const barHeight = item.HealthScore * scale;
+        const y = height - padding - barHeight;
+
+        return `
+            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+                fill="rgba(96,165,250,0.75)" stroke="#3b82f6" rx="4"></rect>
+
+            <text x="${x + barWidth / 2}" y="${y - 8}" text-anchor="middle"
+                fill="#e5e7eb" font-size="11">${item.HealthScore}</text>
+
+            <text x="${x + barWidth / 2}" y="${height - padding + 18}" text-anchor="middle"
+                fill="#9ca3af" font-size="10">${item.CompanyName}</text>
+        `;
+    }).join('');
+
+    const avg = Math.round(data.reduce((sum, d) => sum + d.HealthScore, 0) / data.length);
+
+    return `
+        <div class="trend-summary">
+            <div class="trend-chip total">
+                <div class="trend-value">${avg}</div>
+                <div class="trend-label">Avg Health Score</div>
+            </div>
+        </div>
+
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
+
+            <!-- Axes -->
+            <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
+            <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
+
+            ${bars}
+        </svg>
+    `; 
+}
+window.addEventListener('DOMContentLoaded', () => {
+    financialHealthOverview();
+});
+</script>
