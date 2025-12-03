@@ -6,8 +6,8 @@
 DELIMITER //
 
 CREATE PROCEDURE avgFinancialHealthByCompany(
-    IN startDate DATE,
-    IN endDate DATE
+    IN startDate DATE, -- user-entered
+    IN endDate DATE -- user-entered
 )
 BEGIN
     SELECT 
@@ -34,15 +34,13 @@ BEGIN
         BETWEEN startDate AND endDate
     GROUP BY 
         c.CompanyID,
-        c.CompanyName, // for financial health by company
-        c.Type // for financial health by type of company
+        c.CompanyName, -- for financial health by company
+        c.Type -- for financial health by type of company
     ORDER BY avgHealthScore DESC; -- sorted from highest to lowest
 END;
 //
 
 DELIMITER ;
-
-
 
 -- Regional Disruption Overview -- 
 -- total disruptions (high, medium, low) and total high impact disruptions by region, sorted -- 
@@ -108,8 +106,6 @@ END;
 //
 
 DELIMITER ;
-
-
 
 -- Disruption Frequency Over Time -- 
 
@@ -467,13 +463,12 @@ END;
 DELIMITER ;
 
 
-
 -- Companies affected by specific disruption event --
 -- search by disruption event ID, assumed to be directly affected (not downstream) --
 
 DELIMITER //
 
-CREATE PROCEDURE CompaniesAffectedByEvent(
+CREATE PROCEDURE companiesAffectedByDisruptionEvent(
     IN selectedEventID INT
 )
 BEGIN
@@ -482,8 +477,7 @@ BEGIN
         c.CompanyName,
         ic.ImpactLevel
     FROM ImpactsCompany ic
-    JOIN Company c
-        ON ic.AffectedCompanyID = c.CompanyID
+    JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
     WHERE ic.EventID = selectedEventID
     ORDER BY c.CompanyName;
 END;
@@ -492,5 +486,149 @@ END;
 DELIMITER ;
 
 -- All disruptions within a specific company --
--- search by company name --
+-- search by company name, assumed to be directly impacted (downstream not included) --
+
+DELIMITER //
+
+CREATE PROCEDURE DisruptionsByCompanyName(
+    IN selectedCompanyName VARCHAR(100)
+)
+BEGIN
+    SELECT
+        de.EventID,
+        de.EventDate,
+        de.EventRecoveryDate,
+        dc.CategoryName,
+        ic.ImpactLevel
+    FROM ImpactsCompany ic
+    JOIN Company c
+        ON ic.AffectedCompanyID = c.CompanyID
+    JOIN DisruptionEvent de
+        ON ic.EventID = de.EventID
+    JOIN DisruptionCategory dc
+        ON de.CategoryID = dc.CategoryID
+    WHERE c.CompanyName = selectedCompanyName
+    ORDER BY de.EventDate;
+END;
+//
+
+DELIMITER ;
+
+
+-- Distributors sorted by average delay --
+-- average delay in days --
+
+DELIMITER //
+
+CREATE PROCEDURE distributorsByAverageDelay()
+BEGIN
+    SELECT
+        c.CompanyID,
+        c.CompanyName,
+        AVG(DATEDIFF(s.ActualDate, s.PromisedDate)) AS AvgDelayDays
+    FROM Distributor d
+    JOIN Company c
+        ON d.CompanyID = c.CompanyID
+    JOIN Shipping s
+        ON d.CompanyID = s.DistributorID
+    WHERE s.ActualDate IS NOT NULL
+    GROUP BY c.CompanyID, c.CompanyName
+    ORDER BY AvgDelayDays DESC;
+END;
+//
+
+DELIMITER ;
+
+
+-- Ability to add a new company --
+-- assumption that new company, being new, does not have any previous shipments/disruption events/etc. attached --
+-- continuation of assumption: adding new company only includes components in the Company table --
+
+DELIMITER //
+
+CREATE PROCEDURE AddNewCompany(
+    IN newCompanyName VARCHAR(100),
+    IN locationID INT,
+    IN tierLevel ENUM('1','2','3'),
+    IN companyType ENUM('Manufacturer','Distributor','Retailer')
+)
+BEGIN
+    DECLARE newCompanyID INT;
+    START TRANSACTION;
+    INSERT INTO Company (CompanyName, LocationID, TierLevel, Type)
+    VALUES (newCompanyName, locationID, tierLevel, companyType);
+    SET newCompanyID = LAST_INSERT_ID(); -- new company at end of company ID list
+    IF companyType = 'Distributor' THEN -- putting new company in distributor table
+        INSERT INTO Distributor (CompanyID) VALUES (newCompanyID);
+    ELSEIF companyType = 'Manufacturer' THEN -- putting new company in manufacturer table
+        INSERT INTO Manufacturer (CompanyID, FactoryCapacity) VALUES (newCompanyID, 0); 
+        -- default FactoryCapacity = 0
+    ELSEIF companyType = 'Retailer' THEN -- putting new company in retailer table
+        INSERT INTO Retailer (CompanyID) VALUES (newCompanyID);
+    END IF;
+    COMMIT;
+END;
+//
+
+DELIMITER ;
+
+
+-- 1/2 Nontrivial Plot/Table - Criticality by Region --
+-- summation of criticality of all companies within region, bar chart or similar -- 
+
+DELIMITER //
+
+CREATE PROCEDURE criticalityByRegion()
+BEGIN
+    SELECT
+        l.ContinentName,
+        SUM(
+            COALESCE(downstreamCount,0) * COALESCE(highImpactCount,0)
+        ) AS totalCriticality
+    FROM (
+        SELECT
+            c.CompanyID,
+            c.LocationID,
+            COUNT(DISTINCT d.DownstreamCompanyID) AS downstreamCount,
+            COUNT(DISTINCT CASE 
+                WHEN ic.ImpactLevel = 'High' THEN ic.EventID
+            END) AS highImpactCount
+        FROM Company c
+        LEFT JOIN DependsOn d ON c.CompanyID = d.UpstreamCompanyID
+        LEFT JOIN ImpactsCompany ic ON c.CompanyID = ic.AffectedCompanyID
+        LEFT JOIN DisruptionEvent de ON ic.EventID = de.EventID
+        GROUP BY c.CompanyID, c.LocationID
+    ) AS companyCriticality
+    JOIN Location l ON companyCriticality.LocationID = l.LocationID
+    GROUP BY l.ContinentName
+    ORDER BY totalCriticality DESC;
+END;
+//
+
+DELIMITER ;
+
+-- 2/2 Nontrivial Table/Plot - Top distributors by number of shipments --
+
+DELIMITER //
+
+CREATE PROCEDURE topDistributorsByNumberOfShipments()
+BEGIN
+    SELECT
+        c.CompanyID,
+        c.CompanyName,
+        COUNT(s.ShipmentID) AS totalShipments
+    FROM Distributor d
+    JOIN Company c ON d.CompanyID = c.CompanyID
+    JOIN Shipping s ON d.CompanyID = s.DistributorID
+    GROUP BY
+        c.CompanyID,
+        c.CompanyName
+    ORDER BY
+        totalShipments DESC;
+END;
+//
+
+DELIMITER ;
+
+
 
