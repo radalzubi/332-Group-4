@@ -1,0 +1,496 @@
+--- Average Financial Health --- 
+-- sorted from highest to lowest over user-defined time period -- 
+-- optional date selection for user-defined time period, default all -- 
+-- optional type of company restriction (from Piazza question 200) --
+
+DELIMITER //
+
+CREATE PROCEDURE avgFinancialHealthByCompany(
+    IN startDate DATE,
+    IN endDate DATE
+)
+BEGIN
+    SELECT 
+        c.CompanyID,
+        c.CompanyName,
+        c.Type AS CompanyType,
+        AVG(f.HealthScore) AS avgHealthScore
+    FROM Company c
+    JOIN FinancialReport f
+      ON c.CompanyID = f.CompanyID
+    WHERE
+        STR_TO_DATE(
+            CONCAT(
+                f.RepYear, '-',
+                CASE f.Quarter
+                    WHEN 'Q1' THEN '01-01' -- from Piazza Q1 January 1st through March 31st, etc.
+                    WHEN 'Q2' THEN '04-01'
+                    WHEN 'Q3' THEN '07-01' 
+                    WHEN 'Q4' THEN '10-01'
+                END
+            ),
+            '%Y-%m-%d'
+        )
+        BETWEEN startDate AND endDate
+    GROUP BY 
+        c.CompanyID,
+        c.CompanyName, // for financial health by company
+        c.Type // for financial health by type of company
+    ORDER BY avgHealthScore DESC; -- sorted from highest to lowest
+END;
+//
+
+DELIMITER ;
+
+
+
+-- Regional Disruption Overview -- 
+-- total disruptions (high, medium, low) and total high impact disruptions by region, sorted -- 
+-- assumptions: region is continent, no user-specified dates needed (not in A3 listed req)
+
+DELIMITER //
+
+CREATE PROCEDURE regionalDisruptionOverview()
+BEGIN
+    SELECT
+        l.ContinentName,
+        COUNT(ic.EventID) AS TotalDisruptions,
+        SUM(
+            CASE 
+                WHEN ic.ImpactLevel = 'High' THEN 1 
+                ELSE 0 
+            END
+        ) AS HighImpactDisruptions
+    FROM DisruptionEvent de
+    JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+    JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+    JOIN Location l ON c.LocationID = l.LocationID
+    GROUP BY l.ContinentName
+    ORDER BY
+        TotalDisruptions DESC, -- total disruptions by region, sorted
+        HighImpactDisruptions DESC; -- total high impact disruptions by region, sorted 
+END;
+//
+
+DELIMITER ;
+
+-- Most Critical Companies --
+-- sorted, criticality = (# downstream companies (all downstream are assumed to be affected)) * (high impact count) -- 
+
+DELIMITER //
+
+CREATE PROCEDURE mostCriticalCompanies()
+BEGIN
+    SELECT
+        c.CompanyID,
+        c.CompanyName,
+        c.Type,
+        COUNT(DISTINCT d.DownstreamCompanyID) AS downstreamCount, -- # downstream companies affected
+        COUNT(DISTINCT CASE 
+            WHEN ic.ImpactLevel = 'High' THEN ic.EventID -- high impact count
+        END) AS HighImpactCount,
+        (
+            COUNT(DISTINCT d.DownstreamCompanyID) *
+            COUNT(DISTINCT CASE 
+                WHEN ic.ImpactLevel = 'High' THEN ic.EventID 
+            END)
+        ) AS criticality -- criticality of i calculation
+    FROM Company c
+    LEFT JOIN DependsOn d ON c.CompanyID = d.UpstreamCompanyID
+    LEFT JOIN ImpactsCompany ic ON c.CompanyID = ic.AffectedCompanyID
+    LEFT JOIN DisruptionEvent de ON ic.EventID = de.EventID
+    GROUP BY
+        c.CompanyID,
+        c.CompanyName,
+        c.Type
+    ORDER BY criticality DESC; -- most critical companies sorted
+END;
+//
+
+DELIMITER ;
+
+
+
+-- Disruption Frequency Over Time -- 
+
+DELIMITER //
+
+CREATE PROCEDURE disruptionFrequency(
+    IN startDate DATE,
+    IN endDate DATE
+)
+BEGIN
+    SELECT
+        EventDate,
+        COUNT(EventID) AS TotalDisruptions
+    FROM DisruptionEvent
+    WHERE EventDate BETWEEN startDate AND endDate
+    GROUP BY EventDate
+    ORDER BY EventDate ASC; -- from start date to end date
+END;
+//
+
+DELIMITER ;
+
+
+-- Company Financials by Region --
+-- from Piazza question 247, user-select region (continent), returns average financial health and all companies w all of their respective scores --
+
+DELIMITER //
+
+CREATE PROCEDURE CompanyFinancialsByRegion(
+    IN selectedRegion VARCHAR(50)
+)
+BEGIN
+    SELECT
+        l.ContinentName,
+        l.CountryName,
+        c.CompanyID,
+        c.CompanyName,
+        c.Type AS CompanyType,
+        f.RepYear,
+        f.Quarter,
+        f.HealthScore,
+        (SELECT AVG(f2.HealthScore)
+         FROM Company c2
+         JOIN Location l2 ON c2.LocationID = l2.LocationID
+         JOIN FinancialReport f2 ON c2.CompanyID = f2.CompanyID
+         WHERE l2.ContinentName = selectedRegion
+        ) AS AvgHealthScoreByRegion
+    FROM Company c
+    JOIN Location l ON c.LocationID = l.LocationID
+    JOIN FinancialReport f ON c.CompanyID = f.CompanyID
+    WHERE l.ContinentName = selectedRegion
+    ORDER BY c.CompanyName, f.RepYear, f.Quarter;
+END;
+//
+
+DELIMITER ;
+
+
+-- Ability to bring up any company's data -- 
+-- all data from a company (Piazza question 247), identicial to company search from supply chain manager --
+
+DELIMITER //
+
+CREATE PROCEDURE CompanyInfoSearch( 
+  IN userEnteredName VARCHAR(100),
+  IN userStartDate DATE,
+  IN userEndDate DATE
+)
+BEGIN
+
+  SELECT * -- company info (searchable by name)
+  FROM Company
+  WHERE CompanyName = userEnteredName;
+
+  SELECT -- address (city, country, continent)
+    c.CompanyID,
+    c.CompanyName,
+    l.City,
+    l.CountryName,
+    l.ContinentName
+  FROM Company c
+  JOIN Location l ON c.LocationID = l.LocationID
+  WHERE c.CompanyName = userEnteredName;
+
+  SELECT -- who they depend on, and who depends on them
+    c.CompanyID AS BaseCompanyID, -- searched company
+    depUp.CompanyID AS UpstreamCompanyID, 
+    depUp.CompanyName AS UpstreamCompanyName, -- has dependent(s)
+    depDown.CompanyID AS DownstreamCompanyID,
+    depDown.CompanyName AS DownstreamCompanyName -- is dependent
+  FROM Company c
+  LEFT JOIN DependsOn d1 ON c.CompanyID = d1.DownstreamCompanyID
+  LEFT JOIN Company depUp ON d1.UpstreamCompanyID = depUp.CompanyID -- dependent companies on searched company
+  LEFT JOIN DependsOn d2 ON c.CompanyID = d2.UpstreamCompanyID
+  LEFT JOIN Company depDown ON d2.DownstreamCompanyID = depDown.CompanyID -- companies that searched company depends on
+  WHERE c.CompanyName = userEnteredName;
+
+  SELECT f.* -- most recent financial status
+  FROM FinancialReport f
+  JOIN Company c ON f.CompanyID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName
+  ORDER BY f.RepYear DESC, FIELD(f.Quarter, 'Q4','Q3','Q2','Q1') DESC -- latest year and quarter
+  LIMIT 1; -- most recent
+
+  SELECT -- capacity (if manufacturer)
+      c.CompanyName,
+      m.FactoryCapacity AS TotalCapacity
+  FROM Company c
+  JOIN Manufacturer m ON c.CompanyID = m.CompanyID
+  WHERE c.CompanyName = userEnteredName;
+
+  SELECT -- unique routes operated (if distirbutor)
+      c.CompanyName,
+      COUNT(DISTINCT CONCAT(s.SourceCompanyID, '->', s.DestinationCompanyID)) AS UniqueRoutes
+  FROM Company c
+  JOIN Distributor d ON c.CompanyID = d.CompanyID
+  JOIN Shipping s ON d.CompanyID = s.DistributorID
+  WHERE c.CompanyName = userEnteredName
+  GROUP BY c.CompanyName;
+
+  SELECT -- which products they supply
+    p.ProductID,
+    p.ProductName,
+    sp.SupplyPrice
+  FROM SuppliesProduct sp
+  JOIN Product p ON sp.ProductID = p.ProductID
+  JOIN Company c ON sp.SupplierID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName;
+
+  SELECT -- the diversity of products (based on Piazza question 215: "A3 - Supply Chain Manager Module - Diversity of Products Clarification")
+    p.Category,
+    COUNT(*) AS TotalProductNumber,
+    ROUND(
+      COUNT(*) * 100.0 / (
+        SELECT COUNT(*) FROM SuppliesProduct sp2
+        JOIN Company c2 ON sp2.SupplierID = c2.CompanyID
+        WHERE c2.CompanyName = userEnteredName
+      ), 4
+    ) AS PercentOfTotalProducts
+  FROM SuppliesProduct sp
+  JOIN Product p ON sp.ProductID = p.ProductID
+  JOIN Company c ON sp.SupplierID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName
+  GROUP BY p.Category;
+
+  SELECT -- list of shipping transactions
+    t.TransactionID,
+    'Shipping' AS TransactionType,
+    s.SourceCompanyID,
+    s.DestinationCompanyID,
+    s.Quantity,
+    s.ActualDate AS TransactionDate,
+    p.ProductName
+  FROM InventoryTransaction t
+  JOIN Shipping s ON t.TransactionID = s.TransactionID
+  JOIN Product p ON s.ProductID = p.ProductID
+  JOIN Company c ON (s.SourceCompanyID = c.CompanyID OR s.DestinationCompanyID = c.CompanyID)
+  WHERE c.CompanyName = userEnteredName AND s.ActualDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
+  ORDER BY s.ActualDate DESC;
+
+  SELECT -- list of receiving transactions
+    t.TransactionID,
+    'Receiving' AS TransactionType,
+    r.ReceivedDate AS TransactionDate,
+    r.QuantityReceived AS Quantity,
+    r.ReceiverCompanyID,
+    s.SourceCompanyID,
+    p.ProductName
+  FROM InventoryTransaction t
+  JOIN Receiving r ON t.TransactionID = r.TransactionID
+  JOIN Shipping s ON r.ShipmentID = s.ShipmentID
+  JOIN Product p ON s.ProductID = p.ProductID
+  JOIN Company c ON r.ReceiverCompanyID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName AND r.ReceivedDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
+  ORDER BY r.ReceivedDate DESC;
+
+  SELECT -- list of adjustment transactions
+    t.TransactionID,
+    'Adjustment' AS TransactionType,
+    a.AdjustmentDate,
+    a.QuantityChange,
+    a.CompanyID,
+    p.ProductName,
+    a.Reason
+  FROM InventoryTransaction t
+  JOIN InventoryAdjustment a ON t.TransactionID = a.TransactionID
+  JOIN Product p ON a.ProductID = p.ProductID
+  JOIN Company c ON a.CompanyID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName AND a.AdjustmentDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
+  ORDER BY a.AdjustmentDate DESC;
+
+  WITH distributorShipments AS ( -- Key Performance Indicators (within date range)
+    SELECT
+      s.ShipmentID,
+      s.PromisedDate,
+      s.ActualDate,
+      DATEDIFF(s.ActualDate, s.PromisedDate) AS daysDelayed
+    FROM Shipping s
+    JOIN Company c ON s.DistributorID = c.CompanyID
+    WHERE c.CompanyName = userEnteredName AND c.Type = 'Distributor' AND s.ActualDate BETWEEN COALESCE(userStartDate, '1000-01-01') AND COALESCE(userEndDate, CURRENT_DATE)
+  )
+
+  SELECT 
+    c.CompanyName,
+    c.Type AS CompanyType,
+
+    CASE -- on time delivery rate (from Piazza question 223 only for distributors)
+      WHEN c.Type = 'Distributor' THEN (
+        SELECT ROUND(
+          100.0 * SUM(CASE WHEN ActualDate <= PromisedDate THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0),
+          4
+        )
+        FROM distributorShipments
+      )
+      ELSE NULL
+    END AS OnTimeDeliveryRate,
+
+    CASE -- average of delay: based on difference between delivery and promised dates (from Piazza question 223 only for distributors)
+      WHEN c.Type = 'Distributor' THEN (
+        SELECT ROUND(AVG(daysDelayed), 4)
+        FROM distributorShipments
+      )
+      ELSE NULL
+    END AS AverageDelay,
+
+    CASE -- standard deviation of delay: based on difference between delivery and promised dates (from Piazza question 223 only for distributors)
+      WHEN c.Type = 'Distributor' THEN (
+        SELECT ROUND(STDDEV_POP(daysDelayed), 4)
+        FROM distributorShipments
+      )
+      ELSE NULL
+    END AS StandardDeviationDelay
+
+  FROM Company c
+  WHERE c.CompanyName = userEnteredName;
+
+  WITH LastFourQuarters AS ( -- finding the four quarters counting back a year ago from today
+    SELECT
+      CONCAT('Q', MOD(QUARTER(CURDATE()) - n - 1 + 4, 4) + 1) AS Quarter,
+      YEAR(CURDATE()) - IF(QUARTER(CURDATE()) - n <= 0, 1, 0) AS RepYear
+    FROM (
+      SELECT 0 AS n UNION ALL 
+      SELECT 1 UNION ALL 
+      SELECT 2 UNION ALL 
+      SELECT 3
+    ) AS offsets
+  )
+
+  SELECT -- financial health status over past year from today
+    c.CompanyName,
+    fr.CompanyID,
+    fr.Quarter,
+    fr.RepYear,
+    fr.HealthScore
+  FROM FinancialReport fr
+  JOIN LastFourQuarters lfq ON fr.RepYear = lfq.RepYear AND fr.Quarter = lfq.Quarter
+  JOIN Company c ON fr.CompanyID = c.CompanyID
+  WHERE c.CompanyName = userEnteredName
+  ORDER BY fr.RepYear DESC, fr.Quarter DESC;
+
+  SELECT -- distribution of disruption event counts over past year
+    dc.CategoryName,
+    COUNT(de.EventID) AS EventCount
+  FROM DisruptionCategory dc
+  LEFT JOIN DisruptionEvent de ON dc.CategoryID = de.CategoryID AND de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
+  GROUP BY dc.CategoryName
+  ORDER BY EventCount DESC;
+
+  SELECT -- a list of the disruption events
+    dc.CategoryID,
+    dc.CategoryName, 
+    dc.Description,
+    de.EventID,
+    de.EventDate,
+    de.EventRecoveryDate
+  FROM DisruptionEvent de
+  JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
+  WHERE de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
+  ORDER BY de.EventDate DESC;
+
+END //
+
+DELIMITER ;
+
+-- Top distributors by shipment volume -- 
+
+DELIMITER //
+
+CREATE PROCEDURE topDistributorsByVolume()
+BEGIN
+    SELECT
+        c.CompanyID,
+        c.CompanyName,
+        SUM(s.Quantity) AS totalShipped -- shipment quantity = volume
+    FROM Distributor d
+    JOIN Company c ON d.CompanyID = c.CompanyID
+    JOIN Shipping s ON d.CompanyID = s.DistributorID
+    GROUP BY
+        c.CompanyID,
+        c.CompanyName
+    ORDER BY
+        totalShipped DESC;
+END;
+//
+
+DELIMITER ;
+
+-- Ability to bring up any distributor --
+-- similarly to ability to bring up any company, distributor-specific company search --
+
+DELIMITER //
+
+CREATE PROCEDURE DistributorDetailsByName(
+    IN distributorName VARCHAR(100)
+)
+BEGIN
+    SELECT 
+        c.CompanyID,
+        c.CompanyName,
+        l.CountryName,
+        l.ContinentName,
+        f.Quarter,
+        f.RepYear,
+        f.HealthScore,
+        s.ShipmentID,
+        s.ProductID,
+        p.ProductName,
+        s.SourceCompanyID,
+        s.DestinationCompanyID,
+        s.PromisedDate,
+        s.ActualDate,
+        s.Quantity AS QuantityShipped,
+        r.ReceivingID,
+        r.ReceiverCompanyID,
+        r.ReceivedDate,
+        r.QuantityReceived,
+        sp.ProductID AS SuppliedProductID,
+        sp.SupplyPrice, 
+        ic.EventID,
+        ic.ImpactLevel AS DisruptionImpact
+    FROM Distributor d
+    JOIN Company c ON d.CompanyID = c.CompanyID
+    JOIN Location l ON c.LocationID = l.LocationID
+    LEFT JOIN FinancialReport f ON c.CompanyID = f.CompanyID
+    LEFT JOIN Shipping s ON d.CompanyID = s.DistributorID
+    LEFT JOIN Product p ON s.ProductID = p.ProductID
+    LEFT JOIN Receiving r ON s.ShipmentID = r.ShipmentID
+    LEFT JOIN SuppliesProduct sp ON d.CompanyID = sp.SupplierID
+    LEFT JOIN ImpactsCompany ic ON d.CompanyID = ic.AffectedCompanyID
+    WHERE c.CompanyName = distributorName
+    ORDER BY f.RepYear, f.Quarter, s.PromisedDate;
+END;
+//
+
+DELIMITER ;
+
+
+
+-- Companies affected by specific disruption event --
+-- search by disruption event ID, assumed to be directly affected (not downstream) --
+
+DELIMITER //
+
+CREATE PROCEDURE CompaniesAffectedByEvent(
+    IN selectedEventID INT
+)
+BEGIN
+    SELECT
+        c.CompanyID,
+        c.CompanyName,
+        ic.ImpactLevel
+    FROM ImpactsCompany ic
+    JOIN Company c
+        ON ic.AffectedCompanyID = c.CompanyID
+    WHERE ic.EventID = selectedEventID
+    ORDER BY c.CompanyName;
+END;
+//
+
+DELIMITER ;
+
+-- All disruptions within a specific company --
+-- search by company name --
+
