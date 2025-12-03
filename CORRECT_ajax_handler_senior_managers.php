@@ -1,5 +1,5 @@
 <?php
-// COORECR_ajax_handler_senior_managers.php
+// CORRECT_ajax_handler_senior_managers.php
 
 session_start();
 
