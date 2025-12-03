@@ -1,5 +1,5 @@
 <?php
-// ajax_handler_supply_chain_managers.php
+// CORRECT_ajax_handler_supply_chain_managers.php
 session_start();
 
 // Database Connection
