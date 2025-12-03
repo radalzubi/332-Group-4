@@ -491,7 +491,7 @@ if ($page === 'scm' && $role !== 'scm') {
         </section>
     </div>
 
-    <!-- Senior Manager JavaScript - COMPLETE VERSION -->
+    <!-- Senior Manager JavaScript - COMPLETE VERSION -->   CURRENTLY WORKS BUT NOT FULLY CORRECT FROM PROJECT REQs
     <script>
     // Manager-specific fetch function that handles errors properly
     async function managerFetch(action, data = {}) {
@@ -520,7 +520,7 @@ if ($page === 'scm' && $role !== 'scm') {
         }
     }
 
-    // Financial Health - COMPLETE
+    // Financial Health - COMPLETE, WORKS BUT PARTLY WRONG FROM OLD AJAX NOT CORRECTED
     async function loadFinancialHealth() {
         const display = document.getElementById('financial-health-display');
         if (!display) return;
@@ -573,7 +573,7 @@ if ($page === 'scm' && $role !== 'scm') {
         }
     }
 
-    // Regional Disruptions - COMPLETE
+    // Regional Disruptions - COMPLETE, FROM OLD AJAX NOT CORRECTED
     async function loadRegionalDisruptions() {
         const display = document.getElementById('regional-disruptions-display');
         if (!display) return;
@@ -727,7 +727,7 @@ if ($page === 'scm' && $role !== 'scm') {
         `;
     }
         
-    // Critical Companies - COMPLETE
+    // Critical Companies - COMPLETE, FROM OLD AJAX NOT CORRECTED
     async function loadCriticalCompanies() {
         const display = document.getElementById('critical-companies-display');
         if (!display) return;
@@ -774,7 +774,7 @@ if ($page === 'scm' && $role !== 'scm') {
         }
     }
 
-    // Network Overview - COMPLETE
+    // Network Overview - COMPLETE  - WORKS BUT INCORRECT FROM A3 REQs
     async function loadNetworkOverview() {
         const display = document.getElementById('network-overview-display');
         if (!display) return;
