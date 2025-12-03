@@ -21,6 +21,9 @@ $response = [];
 
 if (isset($_POST['action'])) {
     switch ($_POST['action']) {
+        case 'get_network_overview': // General info about the network
+            $response['data'] = getNetworkOverview($conn);
+            break;
         case 'avg_financial_health': // Average financial health by company
             $startDate = !empty($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
             $endDate   = !empty($_POST['endDate'])   ? $_POST['endDate']   : date("Y-m-d");
@@ -42,26 +45,20 @@ if (isset($_POST['action'])) {
             $region = $_POST['region'];
             $response['company_financials_by_region'] = companyFinancialsByRegion($conn, $region);
             break;
-        case 'company_search': // ability to bring up any company's data
-            $name = $_POST['companyName'];
-            $startDate = $_POST['startDate'] ?? null;
-            $endDate   = $_POST['endDate'] ?? null;
-            $response['company_info'] = companyInfoSearch($conn, $name, $startDate, $endDate);
-            break;
         case 'top_distributors_volume': // Top distributors by shipment volume
             $response['top_distributors_volume'] = topDistributorsByVolume($conn);
             break;
         case 'distributor_details': // Ability to bring up any distributor
             $name = $_POST['distributorName'];
-            $response['distributor_details'] = distributorDetails($conn, $name);
+            $response['distributor_details'] = distributorDetailsByName($conn, $name);
             break;
         case 'companies_by_event': // Companies affected by specific disruption event
             $eventID = $_POST['eventID'];
-            $response['companies_by_event'] = companiesByDisruptionEvent($conn, $eventID);
+            $response['companies_by_event'] = companiesAffectedByDisruptionEvent($conn, $eventID);
             break;
         case 'disruptions_by_company': // All disruptions for a specific company
             $name = $_POST['companyName'];
-            $response['disruptions_by_company'] = disruptionsByCompany($conn, $name);
+            $response['disruptions_by_company'] = getDisruptionsByCompanyName($conn, $name);
             break;
         case 'distributors_by_delay': // Distributors sorted by average delay
             $response['distributors_by_delay'] = distributorsByAverageDelay($conn);
@@ -74,12 +71,21 @@ if (isset($_POST['action'])) {
             $response['add_new_company'] = addNewCompany($conn, $name, $location, $tier, $type);
             break;
         case 'criticality_by_region': // 1/2 nontrivial, criticality by region
-            $response['criticality_by_region'] = criticalityByRegion($conn);
+            $response['criticality_by_region'] = getCriticalityByRegion($conn);
             break;
         case 'top_distributors_shipments': // 2/2 nontrivial, top distributors by number of shipments
         $response['top_distributors_shipments'] = topDistributorsByNumberOfShipments($conn);
         break;
     }
+}
+function getNetworkOverview($conn) {
+    return [
+        'totalCompanies' => 0,
+        'totalConnections' => 0,
+        'activeDisruptions' => 0,
+        'avgNetworkHealth' => 0,
+        'companyTypes' => []
+    ];
 }
 
 function avgFinancialHealth($conn, $startDate, $endDate, $type = null) {
@@ -103,7 +109,7 @@ function avgFinancialHealth($conn, $startDate, $endDate, $type = null) {
             CONCAT(
                 f.RepYear, '-',
                 CASE f.Quarter
-                    WHEN 'Q1' THEN '01-01' //from Piazza Q1 January 1st through March 31st, etc.
+                    WHEN 'Q1' THEN '01-01' /* from Piazza Q1 January 1st through March 31st, etc. */
                     WHEN 'Q2' THEN '04-01'
                     WHEN 'Q3' THEN '07-01'
                     WHEN 'Q4' THEN '10-01'
@@ -113,8 +119,9 @@ function avgFinancialHealth($conn, $startDate, $endDate, $type = null) {
         ) BETWEEN '$startDate' AND '$endDate'
         $typeCondition
     GROUP BY c.CompanyID, c.CompanyName, c.Type
-    ORDER BY avgHealthScore DESC; // from highest to lowest
+    ORDER BY avgHealthScore DESC; /* from highest to lowest */
     ";
+
     return $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
 }
 
@@ -141,12 +148,12 @@ function mostCriticalCompanies($conn) {
         c.CompanyID,
         c.CompanyName,
         c.Type,
-        COUNT(DISTINCT d.DownstreamCompanyID) AS downstreamCount, // # of downstream companies affected
-        COUNT(DISTINCT CASE WHEN ic.ImpactLevel = 'High' THEN ic.EventID END) AS HighImpactCount, // high impact count
+        COUNT(DISTINCT d.DownstreamCompanyID) AS downstreamCount, /* # of downstream companies affected */
+        COUNT(DISTINCT CASE WHEN ic.ImpactLevel = 'High' THEN ic.EventID END) AS HighImpactCount, /* high impact count */
         (
             COUNT(DISTINCT d.DownstreamCompanyID) *
             COUNT(DISTINCT CASE WHEN ic.ImpactLevel = 'High' THEN ic.EventID END)
-        ) AS criticality // # downtstream * high impact count
+        ) AS criticality /* # downtstream * high impact count */
     FROM Company c
     LEFT JOIN DependsOn d ON c.CompanyID = d.UpstreamCompanyID
     LEFT JOIN ImpactsCompany ic ON c.CompanyID = ic.AffectedCompanyID
@@ -189,12 +196,12 @@ function companyFinancialsByRegion($conn, $region) {
             JOIN Location l2 ON c2.LocationID = l2.LocationID
             JOIN FinancialReport f2 ON c2.CompanyID = f2.CompanyID
             WHERE l2.ContinentName = '$region'
-        ) AS AvgHealthScoreByRegion // average health score in the region
+        ) AS AvgHealthScoreByRegion /* average health score in the region */
     FROM Company c
     JOIN Location l ON c.LocationID = l.LocationID
     JOIN FinancialReport f ON c.CompanyID = f.CompanyID
     WHERE l.ContinentName = '$region' 
-    ORDER BY c.CompanyName, f.RepYear, f.Quarter; // all health scores in the region
+    ORDER BY c.CompanyName, f.RepYear, f.Quarter; /* all health scores in the region */
     ";
     return $conn->query($sql)->fetch_all(MYSQLI_ASSOC);
 }
@@ -202,8 +209,8 @@ function companyFinancialsByRegion($conn, $region) {
 // Ability to bring up any company's data
 if ($_POST['action'] === 'company_search') {
     $companyName = $conn->real_escape_string($_POST['company_name']);
-    $startDate   = !empty($_POST['start_date']) ? $conn->real_escape_string($_POST['start_date']) : null;
-    $endDate     = !empty($_POST['end_date'])   ? $conn->real_escape_string($_POST['end_date'])   : null;
+    $startDate   = !empty($_POST['startDate']) ? $conn->real_escape_string($_POST['startDate']) : null;
+    $endDate     = !empty($_POST['endDate'])   ? $conn->real_escape_string($_POST['endDate'])   : null;
 
     $sqlCompany = "
         SELECT *
@@ -258,7 +265,7 @@ if ($_POST['action'] === 'company_search') {
     $sqlCapacity = "
         SELECT 
             c.CompanyName,
-            m.FactoryCapacity AS TotalCapacity // capacity if manufacturer
+            m.FactoryCapacity AS TotalCapacity /* capacity if manufacturer */
         FROM Company c
         JOIN Manufacturer m ON c.CompanyID = m.CompanyID
         WHERE c.CompanyName = '$companyName';
@@ -274,7 +281,7 @@ if ($_POST['action'] === 'company_search') {
         JOIN Distributor d ON c.CompanyID = d.CompanyID
         JOIN Shipping s ON d.CompanyID = s.DistributorID
         WHERE c.CompanyName = '$companyName'
-        GROUP BY c.CompanyName; // unique routes if distributor
+        GROUP BY c.CompanyName; /* unique routes if distributor */
     ";
     $result = $conn->query($sqlRoutes);
     $response['uniqueRoutes'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
@@ -308,7 +315,7 @@ if ($_POST['action'] === 'company_search') {
         JOIN Product p ON sp.ProductID = p.ProductID
         JOIN Company c ON sp.SupplierID = c.CompanyID
         WHERE c.CompanyName = '$companyName'
-        GROUP BY p.Category; // product diversity by category
+        GROUP BY p.Category; /* product diversity by category */
     ";
     $result = $conn->query($sqlDiversity);
     $response['productDiversity'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
@@ -463,7 +470,7 @@ if ($_POST['action'] === 'company_search') {
           ON dc.CategoryID = de.CategoryID 
          AND de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
         GROUP BY dc.CategoryName
-        ORDER BY EventCount DESC; // disruption count last year
+        ORDER BY EventCount DESC; /* disruption count last year */
     ";
     $result = $conn->query($sqlDisruptionSummary);
     $response['disruptionSummary'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
@@ -480,7 +487,7 @@ if ($_POST['action'] === 'company_search') {
         JOIN DisruptionCategory dc 
           ON de.CategoryID = dc.CategoryID
         WHERE de.EventDate >= DATE_SUB(CURDATE(), INTERVAL 1 YEAR)
-        ORDER BY de.EventDate DESC; // disruption event list last year
+        ORDER BY de.EventDate DESC; /* disruption event list last year */
     ";
     $result = $conn->query($sqlDisruptionList);
     $response['disruptionEvents'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
