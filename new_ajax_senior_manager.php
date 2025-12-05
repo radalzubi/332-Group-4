@@ -20,11 +20,11 @@ if (empty($_POST)) {
     }
 }
 
-/* ------------ Database connection ------------ */
+// Database connection
 $servername = "localhost";
-$db_user    = "REDACTED";
-$db_pass    = "REDACTED";
-$db_name    = "REDACTED";
+$db_user    = "your_db_user";
+$db_pass    = "your_db_password";
+$db_name    = "your_db_name";
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
@@ -60,165 +60,6 @@ $action = $_POST['action'];
 
 /* ------------ Action routing ------------ */
 switch ($action) {
-
-    case 'get_network_overview':
-        $response['data'] = getNetworkOverview($conn);
-        break;
-
-    case 'avg_financial_health':
-        $startDate = !empty($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
-        $endDate   = !empty($_POST['endDate']) ? $_POST['endDate'] : date("Y-m-d");
-        $type      = !empty($_POST['companyType']) ? $_POST['companyType'] : null;
-        $response['data'] = avgFinancialHealth($conn, $startDate, $endDate, $type);
-        break;
-
-    case 'regional_disruption_overview':
-        $response['data'] = regionalDisruptionOverview($conn);
-        break;
-
-    case 'most_critical_companies':
-        $response['data'] = mostCriticalCompanies($conn);
-        break;
-
-    case 'disruption_frequency':
-        $startDate = !empty($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
-        $endDate   = !empty($_POST['endDate']) ? $_POST['endDate'] : date("Y-m-d");
-        $response['data'] = disruptionFrequency($conn, $startDate, $endDate);
-        break;
-
-    case 'company_financials_by_region':
-        $region = !empty($_POST['region']) ? $_POST['region'] : '';
-        $response['data'] = companyFinancialsByRegion($conn, $region);
-        break;
-
-    case 'top_distributors_volume':
-        $response['data'] = topDistributorsByVolume($conn);
-        break;
-
-    case 'distributor_details':
-        $name = !empty($_POST['distributorName']) ? $_POST['distributorName'] : '';
-        $response['data'] = distributorDetailsByName($conn, $name);
-        break;
-
-    case 'companies_by_event':
-        $eventID = isset($_POST['eventID']) ? (int)$_POST['eventID'] : 0;
-        $response['data'] = companiesAffectedByDisruptionEvent($conn, $eventID);
-        break;
-
-    case 'disruptions_by_company':
-        $name = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
-        $response['data'] = getDisruptionsByCompanyName($conn, $name);
-        break;
-
-    case 'distributors_by_delay':
-        $response['data'] = distributorsByAverageDelay($conn);
-        break;
-
-    case 'add_new_company':
-        $name     = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
-        $location = isset($_POST['locationID']) ? (int)$_POST['locationID'] : 0;
-        $tier     = !empty($_POST['tierLevel']) ? $_POST['tierLevel'] : '';
-        $type     = !empty($_POST['companyType']) ? $_POST['companyType'] : '';
-        $response['data'] = addNewCompany($conn, $name, $location, $tier, $type);
-        break;
-
-    case 'criticality_by_region':
-        $response['data'] = getCriticalityByRegion($conn);
-        break;
-
-    case 'top_distributors_shipments':
-        $response['data'] = topDistributorsByNumberOfShipments($conn);
-        break;
-
-    case 'test':
-        $response['data'] = [
-            "message" => "Handler is working",
-            "time"    => date("Y-m-d H:i:s")
-        ];
-        break;
-
-    default:
-        $response = [
-            "success" => false,
-            "error"   => "Invalid action: $action"
-        ];
-        break;
-}
-
-/* ------------ Final output ------------ */
-echo json_encode($response, JSON_PRETTY_PRINT);
-exit;
-
-
-/* ------------ SAFE QUERY FUNCTION ------------ */
-function safeQuery($conn, $sql) {
-
-    $result = $conn->query($sql);
-
-    if ($result === false) {
-        return [
-            "success" => false,
-            "error"   => $conn->error,
-            "query"   => $sql
-        ];
-    }
-
-    if ($result === true) {
-        return true; // insert/update/delete
-    }
-
-    $rows = [];
-    while ($row = $result->fetch_assoc()) {
-        $rows[] = $row;
-    }
-
-    return $rows;
-}
-?>
-
-function regionalDisruptionOverview($conn) {
-    $sql = "
-    SELECT l.ContinentName,
-           COUNT(ic.EventID) AS TotalDisruptions,
-           SUM(CASE WHEN ic.ImpactLevel='High' THEN 1 ELSE 0 END) AS HighImpactDisruptions
-    FROM DisruptionEvent de
-    JOIN ImpactsCompany ic ON de.EventID = ic.EventID
-    JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
-    JOIN Location l ON c.LocationID = l.LocationID
-    GROUP BY l.ContinentName
-    ORDER BY TotalDisruptions DESC, HighImpactDisruptions DESC;
-    ";
-    return safeQuery($conn, $sql);
-}
-
-function mostCriticalCompanies($conn) {
-    $sql = "
-    SELECT c.CompanyID, c.CompanyName, c.Type,
-           COUNT(DISTINCT d.DownstreamCompanyID) AS downstreamCount,
-           COUNT(DISTINCT CASE WHEN ic.ImpactLevel='High' THEN ic.EventID END) AS HighImpactCount,
-           (COUNT(DISTINCT d.DownstreamCompanyID) * 
-            COUNT(DISTINCT CASE WHEN ic.ImpactLevel='High' THEN ic.EventID END)) AS criticality
-    FROM Company c
-    LEFT JOIN DependsOn d ON c.CompanyID = d.UpstreamCompanyID
-    LEFT JOIN ImpactsCompany ic ON c.CompanyID = ic.AffectedCompanyID
-    GROUP BY c.CompanyID, c.CompanyName, c.Type
-    ORDER BY criticality DESC;
-    ";
-    return safeQuery($conn, $sql);
-}
-
-function disruptionFrequency($conn, $startDate, $endDate) {
-    $startDate = $conn->real_escape_string($startDate);
-    $endDate   = $conn->real_escape_string($endDate);
-    $sql = "
-        SELECT EventDate, COUNT(EventID) AS TotalDisruptions
-        FROM DisruptionEvent
-        WHERE EventDate BETWEEN '$startDate' AND '$endDate'
-        GROUP BY EventDate
-        ORDER BY EventDate ASC;
-    ";
-    return safeQuery($conn, $sql);
-}
 
 switch ($action) {
     case 'company_search':
@@ -397,14 +238,167 @@ switch ($action) {
             ORDER BY de.EventDate DESC;
         ");
 
-        echo json_encode($response, JSON_PRETTY_PRINT);
-        exit();
+        break;
+
+    case 'get_network_overview':
+        $response['data'] = getNetworkOverview($conn);
+        break;
+
+    case 'avg_financial_health':
+        $startDate = !empty($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
+        $endDate   = !empty($_POST['endDate']) ? $_POST['endDate'] : date("Y-m-d");
+        $type      = !empty($_POST['companyType']) ? $_POST['companyType'] : null;
+        $response['data'] = avgFinancialHealth($conn, $startDate, $endDate, $type);
+        break;
+
+    case 'regional_disruption_overview':
+        $response['data'] = regionalDisruptionOverview($conn);
+        break;
+
+    case 'most_critical_companies':
+        $response['data'] = mostCriticalCompanies($conn);
+        break;
+
+    case 'disruption_frequency':
+        $startDate = !empty($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
+        $endDate   = !empty($_POST['endDate']) ? $_POST['endDate'] : date("Y-m-d");
+        $response['data'] = disruptionFrequency($conn, $startDate, $endDate);
+        break;
+
+    case 'company_financials_by_region':
+        $region = !empty($_POST['region']) ? $_POST['region'] : '';
+        $response['data'] = companyFinancialsByRegion($conn, $region);
+        break;
+
+    case 'top_distributors_volume':
+        $response['data'] = topDistributorsByVolume($conn);
+        break;
+
+    case 'distributor_details':
+        $name = !empty($_POST['distributorName']) ? $_POST['distributorName'] : '';
+        $response['data'] = distributorDetailsByName($conn, $name);
+        break;
+
+    case 'companies_by_event':
+        $eventID = isset($_POST['eventID']) ? (int)$_POST['eventID'] : 0;
+        $response['data'] = companiesAffectedByDisruptionEvent($conn, $eventID);
+        break;
+
+    case 'disruptions_by_company':
+        $name = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
+        $response['data'] = getDisruptionsByCompanyName($conn, $name);
+        break;
+
+    case 'distributors_by_delay':
+        $response['data'] = distributorsByAverageDelay($conn);
+        break;
+
+    case 'add_new_company':
+        $name     = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
+        $location = isset($_POST['locationID']) ? (int)$_POST['locationID'] : 0;
+        $tier     = !empty($_POST['tierLevel']) ? $_POST['tierLevel'] : '';
+        $type     = !empty($_POST['companyType']) ? $_POST['companyType'] : '';
+        $response['data'] = addNewCompany($conn, $name, $location, $tier, $type);
+        break;
+
+    case 'criticality_by_region':
+        $response['data'] = getCriticalityByRegion($conn);
+        break;
+
+    case 'top_distributors_shipments':
+        $response['data'] = topDistributorsByNumberOfShipments($conn);
+        break;
+
+    case 'test':
+        $response['data'] = [
+            "message" => "Handler is working",
+            "time"    => date("Y-m-d H:i:s")
+        ];
         break;
 
     default:
-        echo json_encode(["success" => false, "error" => "Invalid action: $action"]);
-        exit();
+        $response = [
+            "success" => false,
+            "error"   => "Invalid action: $action"
+        ];
+        break;
 }
+
+/* ------------ Final output ------------ */
+echo json_encode($response, JSON_PRETTY_PRINT);
+exit;
+
+
+/* ------------ SAFE QUERY FUNCTION ------------ */
+function safeQuery($conn, $sql) {
+
+    $result = $conn->query($sql);
+
+    if ($result === false) {
+        return [
+            "success" => false,
+            "error"   => $conn->error,
+            "query"   => $sql
+        ];
+    }
+
+    if ($result === true) {
+        return true; // insert/update/delete
+    }
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+
+    return $rows;
+}
+
+
+function regionalDisruptionOverview($conn) {
+    $sql = "
+    SELECT l.ContinentName,
+           COUNT(ic.EventID) AS TotalDisruptions,
+           SUM(CASE WHEN ic.ImpactLevel='High' THEN 1 ELSE 0 END) AS HighImpactDisruptions
+    FROM DisruptionEvent de
+    JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+    JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+    JOIN Location l ON c.LocationID = l.LocationID
+    GROUP BY l.ContinentName
+    ORDER BY TotalDisruptions DESC, HighImpactDisruptions DESC;
+    ";
+    return safeQuery($conn, $sql);
+}
+
+function mostCriticalCompanies($conn) {
+    $sql = "
+    SELECT c.CompanyID, c.CompanyName, c.Type,
+           COUNT(DISTINCT d.DownstreamCompanyID) AS downstreamCount,
+           COUNT(DISTINCT CASE WHEN ic.ImpactLevel='High' THEN ic.EventID END) AS HighImpactCount,
+           (COUNT(DISTINCT d.DownstreamCompanyID) * 
+            COUNT(DISTINCT CASE WHEN ic.ImpactLevel='High' THEN ic.EventID END)) AS criticality
+    FROM Company c
+    LEFT JOIN DependsOn d ON c.CompanyID = d.UpstreamCompanyID
+    LEFT JOIN ImpactsCompany ic ON c.CompanyID = ic.AffectedCompanyID
+    GROUP BY c.CompanyID, c.CompanyName, c.Type
+    ORDER BY criticality DESC;
+    ";
+    return safeQuery($conn, $sql);
+}
+
+function disruptionFrequency($conn, $startDate, $endDate) {
+    $startDate = $conn->real_escape_string($startDate);
+    $endDate   = $conn->real_escape_string($endDate);
+    $sql = "
+        SELECT EventDate, COUNT(EventID) AS TotalDisruptions
+        FROM DisruptionEvent
+        WHERE EventDate BETWEEN '$startDate' AND '$endDate'
+        GROUP BY EventDate
+        ORDER BY EventDate ASC;
+    ";
+    return safeQuery($conn, $sql);
+}
+
 
 function topDistributorsByVolume($conn) {
     $sql = "
