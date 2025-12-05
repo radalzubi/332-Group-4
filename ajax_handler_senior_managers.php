@@ -1,6 +1,10 @@
 <?php
 // CORRECT_ajax_handler_senior_managers.php
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 
 // Database connection
@@ -12,9 +16,11 @@ $db_name    = "your_db_name";
 $conn = @new mysqli($servername, $db_user, $db_pass, $db_name);
 
 if ($conn->connect_error) {
-    die(json_encode(["error" => "Can't connect to the database"]));
+    // Return a JSON error and exit
+    http_response_code(500);
+    echo json_encode(["success" => false, "error" => "DB connect failed", "detail" => $conn->connect_error]);
+    exit;
 }
-
 header('Content-Type: application/json');
 
 $response = [];
