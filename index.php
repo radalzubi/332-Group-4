@@ -375,7 +375,7 @@ if ($page === 'scm' && $role !== 'scm') {
                         <input type="text" id="company-search" placeholder="Find specific info by company or company ID">
                         <button onclick="filterCompany()" class="btn-company-search">Search</button>
                     </div>
-                    <div id="company-results"></div>
+                    <div id="company-search-results"></div>
                 </div>
 
                 <div id="network-overview-display" style="margin-top: 15px;"></div>
@@ -442,10 +442,10 @@ if ($page === 'scm' && $role !== 'scm') {
                 <h2>Company Financials</h2>
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
                     <div class="company-search-box">
-                        <input type="text" id="company-search" placeholder="Sort by company name or ID">
+                        <input type="text" id="company-financial-search" placeholder="Sort by company name or ID">
                         <button onclick="searchCompany()" class="btn-company-search">Search</button>
                     </div>
-                    <div id="company-results"></div>
+                    <div id="company-financial-results"></div>
                 </div>
 
                 <div id="" style="margin-top: 15px;">
