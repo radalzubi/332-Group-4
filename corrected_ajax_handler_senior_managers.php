@@ -86,13 +86,9 @@ switch ($action) {
         break;
 
     default:
-        $response = ["success" => false, "error" => "Invalid action: $action"];
+        echo json_encode(array('error' => 'Invalid action: ' . $action));
         break;
 }
-
-echo json_encode($response, JSON_PRETTY_PRINT);
-exit();
-
 
 function safeQuery($conn, $sql) {
     $result = $conn->query($sql);
