@@ -13,7 +13,15 @@ $db_user    = "your_db_user";
 $db_pass    = "your_db_password";
 $db_name    = "your_db_name";
 
-$conn = @new mysqli($servername, $db_user, $db_pass, $db_name);
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+try {
+    $conn = new mysqli($servername, $db_user, $db_pass, $db_name);
+    $conn->set_charset('utf8mb4');
+} catch (mysqli_sql_exception $e) {
+    http_response_code(500);
+    echo json_encode(["success" => false, "error" => "DB connect failed", "detail" => $e->getMessage()]);
+    exit;
+}
 
 if ($conn->connect_error) {
     // Return a JSON error and exit
