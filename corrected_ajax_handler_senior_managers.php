@@ -1,36 +1,19 @@
 <?php
 // corrected_ajax_handler_senior_managers.php
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 session_start();
 
-header('Content-Type: application/json');
-
+// Database connection
 $servername = "localhost";
 $db_user    = "your_db_user";
 $db_pass    = "your_db_password";
 $db_name    = "your_db_name";
 
-try {
-    $conn = new mysqli($servername, $db_user, $db_pass, $db_name);
-    $conn->set_charset('utf8mb4');
-} catch (mysqli_sql_exception $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "error" => "DB connect failed", "detail" => $e->getMessage()]);
-    exit;
-}
+$conn = @new mysqli($servername, $db_user, $db_pass, $db_name);
 
-$response = ['success' => true, 'data' => []];
+header('Content-Type: application/json');
 
-if (!isset($_POST['action'])) {
-    echo json_encode(["success" => false, "error" => "No action specified"]);
-    exit;
-}
-
-$action = $_POST['action'];
+$action = isset($_POST['action']) ? $_POST['action'] : '';
 
 switch ($action) {
     case 'get_network_overview':
