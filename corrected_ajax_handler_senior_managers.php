@@ -113,7 +113,19 @@ exit();
 
 function safeQuery($conn, $sql) {
     $result = $conn->query($sql);
-    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    if ($result === false) {
+        die("SQL Error: " . $conn->error . "<br>Query: " . $sql);
+    }
+    // For INSERT, UPDATE, DELETE, etc.
+    if ($result === true) {
+        return true;
+    }
+    // For SELECT queries (no mysqlnd dependency)
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+    return $rows;
 }
 
 function getNetworkOverview($conn) {
