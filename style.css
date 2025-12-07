@@ -218,11 +218,8 @@
     }
 }
 
-.panel-top {
-    grid-column: 1 / -1
-}
-
-.panel {
+.panel,
+.panel-wide {
     border-radius: 14px;
     background: radial-gradient(circle at top left, #111827 0, #020617 55%);
     border: 1px solid rgba(55, 65, 81, 0.9);
@@ -230,16 +227,22 @@
     min-height: 120px;
 }
 
-.panel h2 {
+.panel h2,
+.panel-wide h2 {
     margin-top: 0;
     margin-bottom: 6px;
     font-size: 1rem;
 }
 
-.panel p {
+.panel p,
+.panel-wide p {
     margin: 0;
     font-size: 0.86rem;
     color: #9ca3af;
+}
+
+.panel-wide {
+    grid-column: 1 / -1;
 }
 
 /* Animations */
