@@ -245,6 +245,11 @@
     grid-column: 1 / -1;
 }
 
+.financial-summary {
+    font-style: italic;
+    font-size: 1rem;
+ }
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
