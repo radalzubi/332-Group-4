@@ -1,5 +1,7 @@
+// USE THIS ONE
+
 <?php
-// ajax_handler_manager_correct.php 
+// actual_senior_manager.php
 session_start();
 
 // Database connection
