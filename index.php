@@ -369,7 +369,7 @@ if ($page === 'scm' && $role !== 'scm') {
         <!-- DISPLAY PANELS -->
         <section class="grid">
             <!-- General info panel -->
-             <div class="panel-top">
+             <div class="panel-wide">
                 <div class="company-search" style="background: transparent; padding: 0px 0;">
                     <div class="company-search-box">
                         <input type="text" id="company-search" placeholder="Find specific info by company or company ID">
@@ -389,7 +389,7 @@ if ($page === 'scm' && $role !== 'scm') {
                     } }); </script>
 
             <!-- Financial health panel -->
-            <div class="panel">
+            <div class="panel-wide">
                 <h2>Financial Health</h2>
                 <div class="date-range-controls">
                     <label>From:</label>
@@ -491,7 +491,8 @@ if ($page === 'scm' && $role !== 'scm') {
         </section>
     </div>
 
-    <!-- Senior Manager JavaScript - COMPLETE VERSION -->
+
+<!-- Senior Manager functions (JS) -->
     <script>
     // Manager-specific fetch function that handles errors properly
     async function managerFetch(action, data = {}) {
@@ -520,69 +521,92 @@ if ($page === 'scm' && $role !== 'scm') {
         }
     }
 
-    // Financial Health - COMPLETE
+// Financial Health Overview
 async function avgFinancialHealth() {
     const display = document.getElementById('financial-health-display');
     if (!display) return;
 
-    const startDate = document.getElementById('finance-start-date');
-    const endDate   = document.getElementById('finance-end-date');
+    display.innerHTML = '<div class="loading">Loading financial health overview...</div>';
 
-    display.innerHTML = '<div class="loading">Analyzing financial health...</div>';
+    // Call backend
+    const startDate = document.getElementById('finance-start-date')?.value || '2020-01-01';
+    const endDate   = document.getElementById('finance-end-date')?.value || '2025-12-31';
 
     const result = await managerFetch('avg_financial_health', {
-        startDate: startDate.value,
-        endDate: endDate.value
+        startDate,
+        endDate
     });
 
-    // FIX: your backend returns avg_financial_health, not success/data
-    if (!result || !Array.isArray(result.avg_financial_health)) {
-        display.innerHTML = '<div style="color:#ef4444;">Error loading data</div>';
+    // If valid data returned
+    if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const transformed = result.data
+            .sort((a, b) => (b.avgHealthScore || 0) - (a.avgHealthScore || 0))
+            .slice(0, 8)
+            .map(item => ({
+                CompanyName: item.CompanyName,
+                HealthScore: Number(item.avgHealthScore) || 0
+            }));
+
+        display.innerHTML = renderFinancialHealthChart(transformed);
         return;
     }
 
-    const rows = result.avg_financial_health;
+    // Otherwise use fallback demo
+    const errorNote = result.error
+        ? `<div class="trend-note error">${result.error}</div>`
+        : '<div class="trend-note error">No financial data returned.</div>';
 
-    // Compute average
-    const avg = rows.reduce((a, c) => a + (c.avgHealthScore || 0), 0) / rows.length;
-
-    // Sort
-    const sorted = [...rows].sort((a, b) => (b.avgHealthScore || 0) - (a.avgHealthScore || 0));
-
-    const top = sorted.slice(0, 3);
-    const bottom = sorted.slice(-3);
-
-    let html = `
-        <div style="text-align:center;margin-bottom:20px;">
-            <div style="font-size:2.5em;color:#60a5fa;font-weight:bold;">
-                ${avg.toFixed(2)}%
-            </div>
-            <div style="color:#9ca3af;">Average Health Score</div>
-        </div>
-    `;
-
-    html += `<h4 style="color:#22c55e;">Top Performers</h4>`;
-    top.forEach(c => {
-        html += `
-            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding:5px 0">
-                <span>${c.CompanyName}</span>
-                <span style="color:#60a5fa;">${c.avgHealthScore}%</span>
-            </div>`;
-    });
-
-    html += `<h4 style="color:#ef4444;margin-top:15px;">Need Attention</h4>`;
-    bottom.forEach(c => {
-        html += `
-            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #374151;padding:5px 0">
-                <span>${c.CompanyName}</span>
-                <span style="color:#f59e0b;">${c.avgHealthScore}%</span>
-            </div>`;
-    });
-
-    display.innerHTML = html;
+    display.innerHTML = errorNote;
 }
 
+// AVG BAR CHART FOR FINANCIAL HEALTH
+function renderFinancialHealthChart(data) {
+    const width = 1000;
+    const height = 260;
+    const padding = 20;
+    
+    const maxScore = Math.max.apply(null, data.map(d => d.HealthScore).concat([1]));
+    const barWidth = (width - padding * 2) / data.length - 20;
+    const chartHeight = height - padding * 2;
+    const scale = chartHeight / maxScore;
 
+    const bars = data.map((item, idx) => {
+        const x = padding + idx * (barWidth + 20);
+        const barHeight = item.HealthScore * scale;
+        const y = height - padding - barHeight;
+
+        return `
+            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+                fill="rgba(96,165,250,0.75)" stroke="#3b82f6" rx="4"></rect>
+
+            <text x="${x + barWidth / 2}" y="${y - 8}" text-anchor="middle"
+                fill="#e5e7eb" font-size="11">${item.HealthScore}</text>
+
+            <text x="${x + barWidth / 2}" y="${height - padding + 18}" text-anchor="middle"
+                fill="#9ca3af" font-size="10">${item.CompanyName}</text>
+        `;
+    }).join('');
+
+    const avg = Math.round(data.reduce((sum, d) => sum + d.HealthScore, 0) / data.length);
+
+    return `
+        <div class="trend-summary">
+            <div class="trend-chip total">
+                <div class="trend-value">${avg}</div>
+                <div class="trend-label">Avg Health Score</div>
+            </div>
+        </div>
+
+        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
+
+            <!-- Axes -->
+            <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
+            <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
+
+            ${bars}
+        </svg>
+    `; 
+}
 
     // Regional Disruptions - COMPLETE
     async function regionalDisruptionOverview() {
@@ -597,20 +621,20 @@ async function avgFinancialHealth() {
         });
         
         if (result.success && result.data) {
-            let html = '<div style="max-height: 300px; overflow-y: auto;">';
+            let html = '<div style="max-height: 400px; overflow-y: auto;">';
             
             if (result.data.length === 0) {
                 html += '<p style="color: #9ca3af;">No regional data available</p>';
             } else {
                 result.data.slice(0, 10).forEach(function(region) {
-                    const total = region.totalDisruptions || 0;
-                    const high = region.highImpact || 0;
+                    const total = region.TotalDisruptions || 0;
+                    const high = region.HighImpactDisruptions || 0;
                     const medium = region.mediumImpact || 0;
                     const low = region.lowImpact || 0;
                     
                     html += '<div style="margin-bottom: 15px;">';
                     html += '<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">';
-                    html += '<strong>' + (region.region || 'Unknown') + '</strong>';
+                    html += '<strong>' + (region.ContinentName || 'Unknown') + '</strong>';
                     html += '<span style="color: #9ca3af;">' + total + ' events</span>';
                     html += '</div>';
                     
@@ -920,101 +944,4 @@ if (isset($conn) && $conn && !$conn->connect_error) {
     $conn->close();
 }
 ?>
-<div class="panel">
-    <h2>Financial Health Overview</h2>
-    <div id="financial-health-display"></div>
-</div>
 
-
-<script>
-
-// Financial Health Overview
-
-async function financialHealthOverview() {
-    const display = document.getElementById('financial-health-display');
-    if (!display) return;
-
-    display.innerHTML = '<div class="loading">Loading financial health overview...</div>';
-    
-
-
-    // Call backend
-    const result = await managerFetch('getFinancialHealth', {
-        start_date: '2020-01-01',
-        end_date: '2025-12-31'
-    });
-
-    // If valid data returned
-    if (result.success && result.data && result.data.topPerformers && result.data.topPerformers.length > 0) {
-        display.innerHTML = renderFinancialHealthChart(result.data.topPerformers);
-        return;
-    }
-
-    // Otherwise use fallback demo
-    const fallback = [
-        { CompanyName: 'Alpha Corp', HealthScore: 82 },
-        { CompanyName: 'Beta Industries', HealthScore: 75 },
-        { CompanyName: 'Gamma Tech', HealthScore: 91 },
-        { CompanyName: 'Delta Supply', HealthScore: 68 },
-        { CompanyName: 'Epsilon LLC', HealthScore: 73 }
-    ];
-
-    const headline = result.success
-        ? '<div class="trend-note">No financial data returned. Showing a demo chart instead.</div>'
-        : '<div class="trend-note error">Database unreachable. Showing a demo chart instead.</div>';
-
-    display.innerHTML = headline + renderFinancialHealthChart(fallback);
-}
-
-// AVG BAR CHART FOR FINANCIAL HEALTH
-function renderFinancialHealthChart(data) {
-    const width = 470;
-    const height = 260;
-    const padding = 20;
-    
-    const maxScore = Math.max.apply(null, data.map(d => d.HealthScore).concat([1]));
-    const barWidth = (width - padding * 2) / data.length - 20;
-    const chartHeight = height - padding * 2;
-    const scale = chartHeight / maxScore;
-
-    const bars = data.map((item, idx) => {
-        const x = padding + idx * (barWidth + 20);
-        const barHeight = item.HealthScore * scale;
-        const y = height - padding - barHeight;
-
-        return `
-            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
-                fill="rgba(96,165,250,0.75)" stroke="#3b82f6" rx="4"></rect>
-
-            <text x="${x + barWidth / 2}" y="${y - 8}" text-anchor="middle"
-                fill="#e5e7eb" font-size="11">${item.HealthScore}</text>
-
-            <text x="${x + barWidth / 2}" y="${height - padding + 18}" text-anchor="middle"
-                fill="#9ca3af" font-size="10">${item.CompanyName}</text>
-        `;
-    }).join('');
-
-    const avg = Math.round(data.reduce((sum, d) => sum + d.HealthScore, 0) / data.length);
-
-    return `
-        <div class="trend-summary">
-            <div class="trend-chip total">
-                <div class="trend-value">${avg}</div>
-                <div class="trend-label">Avg Health Score</div>
-            </div>
-        </div>
-
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
-
-            <!-- Axes -->
-            <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
-            <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
-
-            ${bars}
-        </svg>
-    `; 
-}
-window.addEventListener('DOMContentLoaded', () => {
-    financialHealthOverview();
-});
-</script>
