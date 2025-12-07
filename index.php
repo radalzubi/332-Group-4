@@ -282,6 +282,8 @@ if ($page === 'scm' && $role !== 'scm') {
             background: rgba(34, 197, 94, 0.2);
             border-left: 4px solid #22c55e;
         }
+
+
     </style>
     <script src="script.js" defer></script>
 </head>
@@ -539,13 +541,20 @@ async function avgFinancialHealth() {
 
     // If valid data returned
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const typeOrder = { Manufacturer: 0, Distributor: 1, Retailer: 2 };
         const transformed = result.data
-            .sort((a, b) => (b.avgHealthScore || 0) - (a.avgHealthScore || 0))
-            .slice(0, 8)
+            
             .map(item => ({
                 CompanyName: item.CompanyName,
+                CompanyType: item.CompanyType || 'Unknown',
                 HealthScore: Number(item.avgHealthScore) || 0
-            }));
+            }))
+            .sort((a, b) => {
+                const groupDiff = (typeOrder[a.CompanyType] ?? 99) - (typeOrder[b.CompanyType] ?? 99);
+                if (groupDiff !== 0) return groupDiff;
+                return (b.HealthScore || 0) - (a.HealthScore || 0);
+            })
+            .slice(0, 999);
 
         display.innerHTML = renderFinancialHealthChart(transformed);
         return;
@@ -561,51 +570,91 @@ async function avgFinancialHealth() {
 
 // AVG BAR CHART FOR FINANCIAL HEALTH
 function renderFinancialHealthChart(data) {
-    const width = 1000;
-    const height = 260;
-    const padding = 20;
+    const baseWidth = 500;
+    const width = Math.max(baseWidth, data.length * 60);
+    const height = 380;
+    const topPadding = 50;
+    const bottomPadding = 50;
+    const padding = 50;
+    const barGap = 20;
+
+    const typeColors = {
+        Manufacturer: { fill: 'rgba(191,219,254,0.9)', stroke: '#93c5fd' },
+        Distributor: { fill: 'rgba(96,165,250,0.75)', stroke: '#3b82f6' },
+        Retailer: { fill: 'rgba(37,99,235,0.85)', stroke: '#1d4ed8' },
+        Default: { fill: 'rgba(96,165,250,0.6)', stroke: '#3b82f6' }
+    };
     
     const maxScore = Math.max.apply(null, data.map(d => d.HealthScore).concat([1]));
-    const barWidth = (width - padding * 2) / data.length - 20;
-    const chartHeight = height - padding * 2;
+    const barWidth = (width - padding * 2) / data.length - barGap;
+    const chartHeight = height - topPadding - bottomPadding;
     const scale = chartHeight / maxScore;
 
-    const bars = data.map((item, idx) => {
-        const x = padding + idx * (barWidth + 20);
-        const barHeight = item.HealthScore * scale;
-        const y = height - padding - barHeight;
+const bars = data.map((item, idx) => {
+    const x = padding + idx * (barWidth + barGap);
+    const barHeight = item.HealthScore * scale;
+    const y = height - bottomPadding - barHeight;
+    const colors = typeColors[item.CompanyType] || typeColors.Default;
 
-        return `
-            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
-                fill="rgba(96,165,250,0.75)" stroke="#3b82f6" rx="4"></rect>
+    return `
+        <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+            fill="${colors.fill}" stroke="${colors.stroke}" rx="4"></rect>
 
-            <text x="${x + barWidth / 2}" y="${y - 8}" text-anchor="middle"
-                fill="#e5e7eb" font-size="11">${item.HealthScore}</text>
+        <!-- Health score above the bar -->
+        <text x="${x + barWidth / 2}" y="${y - 8}"
+            text-anchor="middle" fill="#e5e7eb" font-size="11">
+            ${item.HealthScore}
+        </text>
 
-            <text x="${x + barWidth / 2}" y="${height - padding + 18}" text-anchor="middle"
-                fill="#9ca3af" font-size="10">${item.CompanyName}</text>
-        `;
-    }).join('');
+        <!-- Vertical company name inside the bar -->
+        <text
+            transform="translate(${x + barWidth / 2}, ${y + barHeight / 2}) rotate(-90)"
+            text-anchor="middle"
+            fill="white"
+            font-size="11"
+            style="pointer-events:none;">
+            ${item.CompanyName}
+        </text>
+    `;
+}).join('');
 
     const avg = Math.round(data.reduce((sum, d) => sum + d.HealthScore, 0) / data.length);
 
+    const groups = data.reduce((acc, item, idx) => {
+        const type = item.CompanyType || 'Default';
+        if (!acc[type]) {
+            acc[type] = { start: idx, count: 0 };
+        }
+        acc[type].count += 1;
+        return acc;
+    }, {});
+
+    const groupOrder = ['Manufacturer(s)', 'Distributor(s)', 'Retailer(s)'];
+    const groupLabels = groupOrder
+        .filter(type => groups[type])
+        .map(type => {
+            const { start, count } = groups[type];
+            const firstCenter = padding + start * (barWidth + barGap) + barWidth / 2;
+            const lastCenter = firstCenter + (count - 1) * (barWidth + barGap);
+            const center = (firstCenter + lastCenter) / 2;
+            return `<text x="${center}" y="${height - bottomPadding + 26}" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">${type}</text>`;
+        }).join('');
+
     return `
-        <div class="trend-summary">
-            <div class="trend-chip total">
-                <div class="trend-value">${avg}</div>
-                <div class="trend-label">Avg Health Score</div>
-            </div>
+        <div class="financial-summary">Average Financial Health Score: ${avg}</div> 
+
+        <div style="overflow-x: auto; width: 100%;">
+            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
+                <!-- Axes -->
+                <line x1="${padding}" y1="${height - bottomPadding}" x2="${width - padding}" y2="${height - bottomPadding}" stroke="#4b5563" />
+                <line x1="${padding}" y1="${topPadding}" x2="${padding}" y2="${height - bottomPadding}" stroke="#4b5563" />
+
+                ${bars}
+                ${groupLabels}
+            </svg>
         </div>
+    `;
 
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
-
-            <!-- Axes -->
-            <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
-            <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
-
-            ${bars}
-        </svg>
-    `; 
 }
 
     // Regional Disruptions - COMPLETE
