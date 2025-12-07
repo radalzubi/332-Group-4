@@ -112,7 +112,6 @@ echo json_encode($response, JSON_PRETTY_PRINT);
 exit();
 
 
-
     // Helper function for queries
     function fetchAllAssoc($conn, $sql) {
         $result = $conn->query($sql);
