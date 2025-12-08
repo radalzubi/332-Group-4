@@ -667,7 +667,7 @@ const bars = data.map((item, idx) => {
         return acc;
     }, {});
 
-    const groupOrder = ['Manufacturer(s)', 'Distributor(s)', 'Retailer(s)'];
+    const groupOrder = ['Manufacturer', 'Distributor', 'Retailer'];
     const groupLabels = groupOrder
         .filter(type => groups[type])
         .map(type => {
@@ -675,7 +675,7 @@ const bars = data.map((item, idx) => {
             const firstCenter = padding + start * (barWidth + barGap) + barWidth / 2;
             const lastCenter = firstCenter + (count - 1) * (barWidth + barGap);
             const center = (firstCenter + lastCenter) / 2;
-            return `<text x="${center}" y="${height - bottomPadding + 26}" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">${type}</text>`;
+            return `<text x="${center}" y="${height - bottomPadding + 26}" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">${type}(s)</text>`;
         }).join('');
 
     return `
@@ -1132,10 +1132,13 @@ const bars = data.map((item, idx) => {
             <div class="panel-wide">
                 <h2>Disruption Metrics</h2>
                 <p>DF, ART, HDR, TD calculations</p>
-                <div id="chart-1" style="margin-top: 20px;"></div>
-                <button onclick="loadHighImpactDisruptions()" class="btn-load">Load High Impact Chart</button>
 
-                <div id="art-histogram" style="margin-top: 20px;"></div>
+                <div id="charts-disruptions"> 
+                    <div id="chart-1"></div>
+                    <div id="art-histogram"></div>
+                </div>
+
+                <button onclick="loadHighImpactDisruptions()" class="btn-load">Load High Impact Chart</button>
                 <button onclick="loadAverageRecoveryTimes()" class="btn-load">Load ART Histogram</button>
             </div>
 
@@ -1162,7 +1165,6 @@ const bars = data.map((item, idx) => {
             <div class="panel">
                 <h2>Severity Distribution</h2>
                 <p>Low/Medium/High stacked chart</p>
-
                 <div style="magin-top: 20px;">
                     <canvas id="severityChart" width="200" height="400"></canvas>
                 </div>
