@@ -1143,6 +1143,7 @@ const bars = data.map((item, idx) => {
                 <div id="charts-disruptions" style="padding: 20px;"> 
                     <div id="chart-1"></div>
                     <div id="art-histogram"></div>
+                    <div id="td-histogram"></div>
                         <div style="width: 100%; margin-top: 20px;">
                         <h3 style="margin: 0 0 5px 0; font-size: 1.1rem;">Disruption Frequency</h3>
                         <div id="disruption-frequency-display"></div>
@@ -1455,4 +1456,61 @@ function renderDisruptionFrequencyChart(data) {
     `;
 }
 
+</script>
+
+<script>
+    document.getElementById('load-td-btn').addEventListener('click', loadTotalDowntime);
+//Total Downtime --> 
+async function loadTotalDowntime() { 
+    const display = document.getElementById('td-histogram');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading Total Downtime ...</div>';
+
+// Call Backend
+
+const result = await supplyManagerFetch('disruptionEventsDisplay' , {
+    start_date: '2020-01-01' ,
+    end_date: '2025-12-31'
+});
+let totaldowntimeValues =[];
+// If valid data returned 
+ if (result.success && result.data && Array.isArray(result.data.TD)) {
+    totaldowntimeValues = result.data.TD   
+        .map(item => Number(item.TD))   // 
+        .filter(val => !isNaN(val) && val !== null);
+        totaldowntimeValues.sort((a, b) => a - b);
+        //console.log("TD values for histogram:", totaldowntimeValues); // to verify TD data is correct
+        console.log("RAW TD:", result.data.TD); 
+        console.log("TD values after cleaning:", totaldowntimeValues);
+    }
+
+// Histogram Code for TD
+
+async function renderTotalDowntimeHistogram(totaldowntimeValues) {
+
+var trace = {
+    x: totaldowntimeValues ,
+    type: 'histogram',
+    marker : {
+            color: '#008000'
+
+    }
+  };
+    var layout = {
+    title: 'Total Downtime ',
+    xaxis: { title: 'Total Downtime in Days' },
+    yaxis: { title: 'Frequency' },
+    bargap: 0.2,
+
+    width: 360,
+    height: 260,
+    autosize: false,
+    margin: { t: 40, l: 40, r: 10, b: 40 }
+};
+Plotly.newPlot('td-histogram', [trace] , layout);
+
+}
+   renderTotalDowntimeHistogram(totaldowntimeValues);
+}
 </script>
