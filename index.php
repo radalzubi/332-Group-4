@@ -1164,7 +1164,7 @@ const bars = data.map((item, idx) => {
                 <p>Low/Medium/High stacked chart</p>
 
                 <div style="magin-top: 20px;">
-                    <canvas id="severityChart" width="120" height="400"></canvas>
+                    <canvas id="severityChart" width="200" height="400"></canvas>
                 </div>
 
                 <button onclick="loadSeverityStackedBar()" class="btn-load severity-btn">
