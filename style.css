@@ -254,7 +254,10 @@
     width: 100%;
     height: 500px;
 }
-
+#td-histogram {
+    width: 100%;
+    height: 400px;
+}
 #charts-disruptions {
     display: flex;
     gap: 20px;
@@ -264,7 +267,8 @@
 }
 
 #chart-1,
-#art-histogram {
+#art-histogram
+#td-histogram {
     width: 350px;
     height: 260px;
 }
