@@ -993,4 +993,97 @@ if (isset($conn) && $conn && !$conn->connect_error) {
     $conn->close();
 }
 ?>
+<script>
+// High Impact Disruption Rate: Pie Chart use function: disruptionEventsDisplay and variable HDR
 
+async function disruptionEventsDisplay() {
+    const display = document.getElementById('chart-1');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading High Impact Disruptions overview...</div>';
+
+// Call Backend
+const result = await managerFetch('getHighImpactDisruptions' , {
+    start_date: '2020-01-01' ,
+    end_date: '2025-12-31'
+});
+
+// If valid data returned 
+if (result.success && Array.isArray(result.data.SeverityDistribution) 
+){
+let high = 0;
+let other = 0;
+
+result.data.SeverityDistribution.forEach(item => {
+    if (item.ImpactLevel === 'High') {
+                high += Number(item.Count) || 0;
+            } else {
+                other += Number(item.Count) || 0;
+            }
+});
+const HDRChart = [
+            { label: 'High Impact Disruptions', value: high },
+            { label: 'Other Disruptions', value: other }
+        ];
+         const chartDiv = document.getElementById('chart-1');
+        chartDiv.innerHTML = ''; // clear previous content
+        chartDiv.appendChild(renderHighImpactDisruptionsChart(HDRChart));      
+}
+
+else {
+// Otherwise use fallback demo
+    const errorNote = result.error
+        ? `<div class="trend-note error">${result.error}</div>`
+        : '<div class="trend-note error">No High Impact Disruption data returned.</div>';
+
+    display.innerHTML = errorNote;
+
+}
+}
+
+// Pie Chart for High Impact Disruptions 
+
+function renderHighImpactDisruptionsChart(HDRChart) {
+// config 
+const labels = HDRChart.map(item => item.label);
+const values = HDRChart.map(item => item.value);
+const config = {
+  type: 'pie',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'High Impact Disruptions',
+      data: values,
+      backgroundColor: [
+       '#FF0000' , // red for high impact
+         '#0000FF' // BLUE for other
+      ]
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top'
+      },
+      title: {
+        display: true,
+        text: 'High Impact vs Other Disruptions'
+      
+      }
+    }
+  }
+  
+};
+const canvas = document.createElement('canvas');
+    canvas.width = 400; 
+    canvas.height = 300;
+    new Chart(canvas, config);
+    return canvas; 
+   
+}
+document.addEventListener('DOMContentLoaded', () => {
+    disruptionEventsDisplay();
+});
+</script>
+   
