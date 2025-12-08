@@ -1,12 +1,5 @@
-// script.js – IE 332 ERP Dashboard JS
-// Make sure this file is in the SAME folder as index.php and ajax_handler.php
-
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("script.js loaded");
-
-    // =========================================================
-    // LOGIN FORM VALIDATION + SHAKE ANIMATION
-    // =========================================================
+/* script.js for the supply chain managers (senior managers is located in index because 
+   they were each done by different group members) */
     const loginForm   = document.getElementById("login-form");
     const usernameInp = document.getElementById("username");
     const passwordInp = document.getElementById("password");
@@ -42,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
     // GENERIC AJAX HELPER
     // =========================================================
-    async function fetchData(action, data = {}) {
+    window.supplyManagerFetch = async function (action, data = {}) {
         try {
             const formData = new FormData();
             formData.append("action", action);
@@ -50,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 formData.append(key, data[key]);
             });
 
-            const response = await fetch("ajax_handler.php", {
+            const response = await fetch("ajax_handler_supply_chain_managers.php", {
                 method: "POST",
                 body: formData
             });
@@ -65,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return { success: false, error: "Bad JSON from server", raw: text };
             }
         } catch (err) {
-            console.error("fetchData error:", err);
+            console.error("supplyManagerFetch error:", err);
             return { success: false, error: err.message || "Network error" };
         }
     }
@@ -97,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         displayDiv.innerHTML = `<p class="loading">Loading KPIs...</p>`;
 
-        const result = await fetchData("getKPIs", {
+        const result = await supplyManagerFetch("getKPIs", {
             start_date,
             end_date,
             company_name
@@ -195,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         resultsDiv.innerHTML = `<p class="loading">Searching for "${name}"...</p>`;
 
-        const result = await fetchData("searchCompany", { name });
+        const result = await supplyManagerFetch("searchCompany", { name });
 
         if (!result || !result.success || !result.data || result.data.length === 0) {
             const msg = (result && result.message) || (result && result.error) || "No companies found";
@@ -276,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loadingDiv) loadingDiv.style.display = "block";
         displayDiv.innerHTML = "";
 
-        const result = await fetchData("getDisruptionMetrics", {
+        const result = await supplyManagerFetch("getDisruptionMetrics", {
             start_date,
             end_date
         });
@@ -312,8 +305,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="kpi-subtitle">currently active</div>
                 </div>
             </div>
-            <div id="chart-1"></div>
-            <div id="art-histogram" style="width:100%; height:350px; margin-top:25px;"></div>
         `;
 
         displayDiv.innerHTML = html;
@@ -330,7 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         container.innerHTML = `<div class="loading">Loading alerts...</div>`;
 
-        const result = await fetchData("getAlerts", {});
+        const result = await supplyManagerFetch("alertsOngoingDisruptions", {});
 
         if (!result || !result.success || !result.data) {
             container.innerHTML = `<p style="color:#9ca3af;">No alerts or error loading alerts.</p>`;
@@ -339,7 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         let html = "";
-        result.data.forEach(alert => {
+        result.data.ongoingAlerts.forEach(alert => {
             const severity = (alert.Severity || alert.severity || "low").toLowerCase();
             let severityClass = "alert-low";
             if (severity === "high")   severityClass = "alert-high";
@@ -372,11 +363,3 @@ document.addEventListener("DOMContentLoaded", () => {
             window.loadKPIs();
         }, 500);
     }
-
-    // If the alerts container exists, load alerts and refresh every 30s
-    if (document.getElementById("alerts-container")) {
-        console.log("Setting up alerts auto-refresh");
-        loadAlerts();
-        setInterval(loadAlerts, 30000);
-    }
-});
