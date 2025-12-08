@@ -311,6 +311,80 @@
     };
 
     // =========================================================
+// SEVERITY DISTRIBUTION (STACKED BAR CHART)
+// =========================================================
+async function loadSeverityStackedBar() {
+    const result = await supplyManagerFetch("disruptionEventsDisplay", {
+        startDate: "2020-01-01",
+        endDate: "2025-12-31"
+    });
+
+    if (!result.success || !result.data || !result.data.SeverityDistribution) {
+        console.error("Severity load error:", result);
+        return;
+    }
+
+    const severity = result.data.SeverityDistribution;
+
+    const low = severity.find(x => x.ImpactLevel === "Low")?.Count || 0;
+    const med = severity.find(x => x.ImpactLevel === "Medium")?.Count || 0;
+    const high = severity.find(x => x.ImpactLevel === "High")?.Count || 0;
+
+    const canvas = document.getElementById("severityChart");
+    if (!canvas) {
+        console.warn("severityChart canvas not found in DOM");
+        return;
+    }
+
+    const ctx = canvas.getContext("2d");
+
+    if (window.severityChartInstance) {
+        window.severityChartInstance.destroy();
+    }
+
+    window.severityChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Severity Distribution"],
+            datasets: [
+                {
+                    label: "Low",
+                    data: [low],
+                    backgroundColor: "#22c55e"
+                },
+                {
+                    label: "Medium",
+                    data: [med],
+                    backgroundColor: "#f59e0b"
+                },
+                {
+                    label: "High",
+                    data: [high],
+                    backgroundColor: "#ef4444"
+                }
+            ]
+        },
+        options: {
+            responsive: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: "Disruption Severity Distribution (Stacked)"
+                }
+            },
+            scales: {
+                x: { stacked: true,
+                    barPercentage: 0.3,
+                    categoryPercentage: 0.5
+                },
+                y: {stacked: true, 
+                    beginAtZero: true }
+            }
+        }
+    });
+}
+
+    // =========================================================
     // ALERTS PANEL
     // =========================================================
     async function loadAlerts() {
@@ -363,3 +437,4 @@
             window.loadKPIs();
         }, 500);
     }
+
