@@ -1514,4 +1514,7 @@ Plotly.newPlot('td-histogram', [trace] , layout);
 }
    renderTotalDowntimeHistogram(totaldowntimeValues);
 }
+    // lines 1132- 1139 in php have the code needed for the buttons, you need to make a new one for total Downtime index.php lines 1141-1142
+    // you ned to add histogram size specifications in css line 258
+    // you need to add js website source  e.g if you used plotly, chart.js etc line 74-76 (not neded in this case because already referenced for ART Histogram
 </script>
