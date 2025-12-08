@@ -255,6 +255,21 @@
     height: 500px;
 }
 
+#charts-disruptions {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+#chart-1,
+#art-histogram {
+    width: 350px;
+    height: 260px;
+}
+
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
