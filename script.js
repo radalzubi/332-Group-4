@@ -311,8 +311,127 @@
     };
 
     // =========================================================
-// SEVERITY DISTRIBUTION (STACKED BAR CHART)
-// =========================================================
+    // ALERTS PANEL
+    // =========================================================
+    async function loadAlerts() {
+        const container = document.getElementById("alerts-container");
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = `<div class="loading">Loading alerts...</div>`;
+
+        const result = await supplyManagerFetch("alertsOngoingDisruptions", {});
+
+        if (!result || !result.success || !result.data) {
+            container.innerHTML = `<p style="color:#9ca3af;">No alerts or error loading alerts.</p>`;
+            console.error("loadAlerts error:", result);
+            return;
+        }
+
+        let html = "";
+        result.data.ongoingAlerts.forEach(alert => {
+            const severity = (alert.Severity || alert.severity || "low").toLowerCase();
+            let severityClass = "alert-low";
+            if (severity === "high")   severityClass = "alert-high";
+            if (severity === "medium") severityClass = "alert-medium";
+
+            html += `
+                <div class="alert ${severityClass}">
+                    <div class="alert-header">
+                        <span class="alert-severity">${severity.toUpperCase()}</span>
+                        <span class="alert-date">${alert.EventDate || ""}</span>
+                    </div>
+                    <div class="alert-body">
+                        <p>${alert.Description || "No description"}</p>
+                        <p class="alert-company">${alert.CompanyName || ""}</p>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+// RRC Heatmap function 
+    window.rrcHeatmap = async function () {
+        const display = document.getElementById('rrc-heatmap-display');
+        if (!display) return;
+
+        display.innerHTML = '<div class="loading">Loading regional risk heatmap...</div>';
+
+        const locationID = document.getElementById('heatmap-location-id')?.value || '';
+
+        const result = await supplyManagerFetch('disruptionEventsDisplay', { locationID });
+
+        if (result.success && Array.isArray(result.data.RRC) && result.data.RRC.length > 0) {
+            const transformed = result.data.RRC
+            .map(item => ({
+            region: item.Region,
+            rrc: Number(item.RRC) / 100 || 0
+        }))
+        .sort((a, b) => b.rrc - a.rrc);
+
+    display.innerHTML = renderRRCHeatmapChart(transformed);
+    return;
+}
+
+
+        const errorNote = result.error
+            ? `<div class="trend-note error">${result.error}</div>`
+            : '<div class="trend-note error">No RRC data returned.</div>';
+
+        display.innerHTML = errorNote;
+    }
+
+    function renderRRCHeatmapChart(data) {
+        const baseWidth = 500;
+        const width = Math.max(baseWidth, data.length * 80);
+        const height = 320;
+        const padding = 50;
+        const cellWidth = (width - padding * 2) / data.length;
+        const cellHeight = 60;
+
+        const maxRRC = Math.max(...data.map(d => d.rrc));
+        function rrcToColor(rrc) {
+            const intensity = Math.round(255 - (rrc / maxRRC) * 180);
+            return `rgb(255, ${intensity}, ${intensity})`;
+        }
+
+        const cells = data.map((item, idx) => {
+            const x = padding + idx * cellWidth;
+            const y = padding;
+
+            return `
+                <rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}"
+                    fill="${rrcToColor(item.rrc)}" stroke="#374151" rx="4"></rect>
+
+                <text x="${x + cellWidth / 2}" y="${y + cellHeight / 2 + 4}" 
+                    text-anchor="middle" fill="white" font-size="12" font-weight="bold">
+                    ${item.region.includes(" ") 
+                        ? `<tspan x="${x + cellWidth / 2}" dy="-7">${item.region.split(" ")[0]}</tspan>
+                        <tspan x="${x + cellWidth / 2}" dy="14">${item.region.split(" ")[1]}</tspan>`
+                    : item.region}
+                </text>
+
+                <text x="${x + cellWidth / 2}" y="${y + cellHeight + 20}"
+                    text-anchor="middle" fill="#e5e7eb" font-size="11">
+                    ${(item.rrc * 100).toFixed(1)}%
+                </text>
+            `;
+        }).join('');
+
+        return `
+            <div class="rrc-summary">Regional Risk Concentration across regions</div>
+            <div style="overflow-x: auto; width: 100%;">
+                <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
+                    ${cells}
+                </svg>
+            </div>
+        `;
+    }
+
+// Severity disruptions chart
 async function loadSeverityStackedBar() {
     const result = await supplyManagerFetch("disruptionEventsDisplay", {
         startDate: "2020-01-01",
@@ -385,49 +504,6 @@ async function loadSeverityStackedBar() {
 }
 
     // =========================================================
-    // ALERTS PANEL
-    // =========================================================
-    async function loadAlerts() {
-        const container = document.getElementById("alerts-container");
-        if (!container) {
-            return;
-        }
-
-        container.innerHTML = `<div class="loading">Loading alerts...</div>`;
-
-        const result = await supplyManagerFetch("alertsOngoingDisruptions", {});
-
-        if (!result || !result.success || !result.data) {
-            container.innerHTML = `<p style="color:#9ca3af;">No alerts or error loading alerts.</p>`;
-            console.error("loadAlerts error:", result);
-            return;
-        }
-
-        let html = "";
-        result.data.ongoingAlerts.forEach(alert => {
-            const severity = (alert.Severity || alert.severity || "low").toLowerCase();
-            let severityClass = "alert-low";
-            if (severity === "high")   severityClass = "alert-high";
-            if (severity === "medium") severityClass = "alert-medium";
-
-            html += `
-                <div class="alert ${severityClass}">
-                    <div class="alert-header">
-                        <span class="alert-severity">${severity.toUpperCase()}</span>
-                        <span class="alert-date">${alert.EventDate || ""}</span>
-                    </div>
-                    <div class="alert-body">
-                        <p>${alert.Description || "No description"}</p>
-                        <p class="alert-company">${alert.CompanyName || ""}</p>
-                    </div>
-                </div>
-            `;
-        });
-
-        container.innerHTML = html;
-    }
-
-    // =========================================================
     // AUTO-LOAD THINGS ON SCM PAGE
     // =========================================================
     // If the KPI panel exists, auto-load KPIs shortly after page load
@@ -437,4 +513,3 @@ async function loadSeverityStackedBar() {
             window.loadKPIs();
         }, 500);
     }
-
