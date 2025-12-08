@@ -461,7 +461,19 @@ if ($page === 'scm' && $role !== 'scm') {
 
             <!-- Top distributors by shipment volume panel -->
             <div class="panel">
-                <h2>Top Distributors</h2>
+                <h2>Top Distributors by Shipment Volume</h2>
+
+                <div class="distributor-search" style="background: transparent; padding: 10px 0;">
+                    <div class="distributor-search-box">
+                        <input type="text" id="distributor-search" placeholder="Filter by distributor name or ID">
+                        <button onclick="topDistributorsByVolume()" class="btn-distributor-search">Find</button>
+                    </div>
+                    <div id="distributor-volume-results"></div>
+                </div>
+
+                <div id="top-distributors-display" style="margin-top: 15px;">
+                    <div class="loading">Search distributors by shipment volume, filterable by name or ID.</div>
+                </div>
             </div>
 
             <!-- Companies affected by disruption event panel -->
@@ -481,7 +493,29 @@ if ($page === 'scm' && $role !== 'scm') {
 
             <!-- Adding a new company panel -->
             <div class="panel">
-                <h2>Add a New Company</h2>
+                <h2>Add New Company</h2>
+
+                <div style="padding: 10px 0;">
+                 <label>Company Name:</label>
+                    <input type="text" id="new-company-name" placeholder="e.g. Apex Corp" />
+
+                 <label>Company Type:</label>
+                 <select id="new-company-type">
+                      <option value="Manufacturer">Manufacturer</option>
+                      <option value="Distributor">Distributor</option>
+                      <option value="Retailer">Retailer</option>
+                    </select>
+
+                 <label>Region:</label>
+                 <input type="text" id="new-company-region" placeholder="e.g. North America" />
+
+                 <label>Tier Level:</label>
+                 <input type="number" id="new-company-tier" min="1" max="5" />
+
+                    <button onclick="addNewCompany()" style="margin-top: 10px;" class="btn-company-search">Add Company</button>
+             </div>
+
+                <div id="add-company-feedback" style="margin-top: 10px;"></div>
             </div>
 
             <!-- Nontrivial plot 1 panel-->
@@ -660,6 +694,137 @@ const bars = data.map((item, idx) => {
     `;
 
 }
+
+    // Top Distributors By Volume - NEW (NEED TO CHECK)
+        async function topDistributorsByVolume() {
+        const display = document.getElementById('top-distributors-display');
+        if (!display) return;
+
+        display.innerHTML = '<div class="loading">Analyzing shipment volume by distributor...</div>';
+
+        const result = await managerFetch('top_distributors_by_volume');
+
+        if (result.success && Array.isArray(result.data)) {
+            let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+            if (result.data.length === 0) {
+                html += '<p style="color: #9ca3af;">No distributors found with shipment volume</p>';
+            } else {
+                result.data.slice(0, 10).forEach((distributor, index) => {
+                    const volume = Number(distributor.TotalShipments || 0);
+                    const color = volume > 1000 ? '#22c55e' :
+                                volume > 500  ? '#eab308' :
+                                volume > 100  ? '#f97316' : '#ef4444';
+
+                    html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
+                    html += '<div style="flex: 1;">';
+                    html += '<strong>#' + (index + 1) + ' ' + (distributor.CompanyName || 'Unknown') + '</strong>';
+                    html += '<div style="font-size: 0.85em; color: #9ca3af; margin-top: 3px;">';
+                    html += (distributor.CompanyType || 'Distributor') + ' | Region: ' + (distributor.Region || 'N/A');
+                    html += '</div>';
+                    html += '</div>';
+                    html += '<div style="text-align: center; padding: 0 10px;">';
+                    html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + color + ';">';
+                    html += volume;
+                    html += '</div>';
+                    html += '<div style="font-size: 0.75em; color: ' + color + ';">';
+                    html += 'Shipments';
+                    html += '</div></div>';
+
+                    html += `<div style="padding-left: 10px;"><button onclick="viewDistributorDetails('${distributor.CompanyName}')" style="font-size: 0.75em; padding: 4px 8px; background: #1f2937; border: 1px solid #4b5563; border-radius: 4px; color: #93c5fd;">View</button></div>`;
+                    html += '</div>';
+                });
+            }
+
+            html += '</div>';
+            display.innerHTML = html;
+        } else {
+            display.innerHTML = '<div style="color: #ef4444;">Error loading top distributors.</div>';
+        }
+    }
+
+    // Company Financials By Region - NEW (NEED TO CHECK)
+        async function companyFinancialsByRegion() {
+        const display = document.getElementById('regional-financials-display');
+        if (!display) return;
+
+        display.innerHTML = '<div class="loading">Loading company financials by region...</div>';
+
+        const startDate = document.getElementById('finance-start-date')?.value || '2020-01-01';
+        const endDate   = document.getElementById('finance-end-date')?.value || '2025-12-31';
+        const companyType = document.getElementById('company-type-select')?.value || '';
+
+        const result = await managerFetch('avg_financial_health', {
+            startDate,
+            endDate,
+            companyType
+        });
+
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+            let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+            result.data.forEach((company, index) => {
+                const health = Number(company.avgHealthScore) || 0;
+                const color = health >= 80 ? '#22c55e' :
+                            health >= 60 ? '#eab308' :
+                            health >= 40 ? '#f97316' : '#ef4444';
+
+                html += `<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 10px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ${color};">`;
+
+                html += `<div style="flex: 1;">`;
+                html += `<strong>#${index + 1} ${company.CompanyName || 'Unknown'}</strong>`;
+                html += `<div style="font-size: 0.85em; color: #9ca3af; margin-top: 2px;">${company.CompanyType || 'Unknown'} | ${company.Region || 'Unknown Region'}</div>`;
+                html += `</div>`;
+
+                html += `<div style="text-align: center; padding: 0 10px;">`;
+                html += `<div style="font-size: 1.2em; font-weight: bold; color: ${color};">${health.toFixed(1)}</div>`;
+                html += `<div style="font-size: 0.75em; color: ${color};">Health Score</div>`;
+                html += `</div>`;
+
+                html += `<div style="padding-left: 10px;"><button onclick="viewCompanyDetails('${company.CompanyName}')" style="font-size: 0.75em; padding: 4px 8px; background: #1f2937; border: 1px solid #4b5563; border-radius: 4px; color: #93c5fd;">View</button></div>`;
+
+                html += `</div>`;
+            });
+
+            html += '</div>';
+            display.innerHTML = html;
+        } else {
+            display.innerHTML = '<div style="color: #ef4444;">No company financial data available.</div>';
+        }
+    }
+
+    // Add New Company - NEW (NEED TO CHECK)
+    async function addNewCompany() {
+        const name = document.getElementById('new-company-name').value.trim();
+        const type = document.getElementById('new-company-type').value;
+        const region = document.getElementById('new-company-region').value.trim();
+        const tier = parseInt(document.getElementById('new-company-tier').value);
+        const feedback = document.getElementById('add-company-feedback');
+
+        if (!name || !region || isNaN(tier)) {
+            feedback.innerHTML = '<div style="color: #f87171;">Please fill in all required fields.</div>';
+            return;
+        }
+
+        feedback.innerHTML = '<div class="loading">Adding company...</div>';
+
+        const result = await managerFetch('add_new_company', {
+            name,
+            type,
+            region,
+            tier
+        });
+
+        if (result.success) {
+            feedback.innerHTML = '<div style="color: #22c55e;">Company added successfully!</div>';
+            // Optionally clear the form
+            document.getElementById('new-company-name').value = '';
+            document.getElementById('new-company-region').value = '';
+            document.getElementById('new-company-tier').value = '';
+        } else {
+            feedback.innerHTML = `<div style="color: #f87171;">Error: ${result.error || 'Failed to add company.'}</div>`;
+        }
+    }
 
     // Regional Disruptions - COMPLETE
     async function regionalDisruptionOverview() {
@@ -1145,3 +1310,81 @@ Plotly.newPlot('art-histogram', [trace] , layout);
     renderAverageRecoveryTimeHistogram(artValues);
 }
 </script>
+// RRC Heatmap - NEW (NEED TO CHECK)
+<script>
+    async function rrcHeatmap() {
+        const display = document.getElementById('rrc-heatmap-display');
+        if (!display) return;
+
+        display.innerHTML = '<div class="loading">Loading regional risk heatmap...</div>';
+
+        const locationID = document.getElementById('heatmap-location-id')?.value || '';
+
+        const result = await managerFetch('regionalRiskHeatmap', {
+            locationID
+        });
+
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+            const transformed = result.data
+                .map(item => ({
+                    region: item.region,
+                    rrc: Number(item.rrc) || 0
+                }))
+                .sort((a, b) => (b.rrc - a.rrc))
+                .slice(0, 999);
+
+            display.innerHTML = renderRRCHeatmapChart(transformed);
+            return;
+        }
+
+        const errorNote = result.error
+            ? `<div class="trend-note error">${result.error}</div>`
+            : '<div class="trend-note error">No RRC data returned.</div>';
+
+        display.innerHTML = errorNote;
+    }
+
+    function renderRRCHeatmapChart(data) {
+        const baseWidth = 500;
+        const width = Math.max(baseWidth, data.length * 80);
+        const height = 320;
+        const padding = 50;
+        const cellWidth = (width - padding * 2) / data.length;
+        const cellHeight = 60;
+
+        const maxRRC = Math.max(...data.map(d => d.rrc));
+        function rrcToColor(rrc) {
+            const intensity = Math.round(255 - (rrc / maxRRC) * 180);
+            return `rgb(255, ${intensity}, ${intensity})`;
+        }
+
+        const cells = data.map((item, idx) => {
+            const x = padding + idx * cellWidth;
+            const y = padding;
+
+            return `
+                <rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}"
+                    fill="${rrcToColor(item.rrc)}" stroke="#374151" rx="4"></rect>
+
+                <text x="${x + cellWidth / 2}" y="${y + cellHeight / 2 + 4}" 
+                    text-anchor="middle" fill="white" font-size="12" font-weight="bold">
+                    ${item.region}
+                </text>
+
+                <text x="${x + cellWidth / 2}" y="${y + cellHeight + 20}"
+                    text-anchor="middle" fill="#e5e7eb" font-size="11">
+                    ${(item.rrc * 100).toFixed(1)}%
+                </text>
+            `;
+        }).join('');
+
+        return `
+            <div class="rrc-summary">Regional Risk Concentration across regions</div>
+            <div style="overflow-x: auto; width: 100%;">
+                <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
+                    ${cells}
+                </svg>
+            </div>
+        `;
+    }
+
