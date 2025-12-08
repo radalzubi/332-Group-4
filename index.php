@@ -1038,9 +1038,7 @@ else {
 
     display.innerHTML = errorNote;
 
-}
-}
-
+}}
 // Pie Chart for High Impact Disruptions 
 
 function renderHighImpactDisruptionsChart(HDRChart) {
@@ -1086,4 +1084,53 @@ document.addEventListener('DOMContentLoaded', () => {
     disruptionEventsDisplay();
 });
 </script>
-   
+
+<script>
+// Average Recovery Time supply chain Manager
+async function disruptionEventsDisplay() {
+    const display = document.getElementById('art-histogram');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading Average Recovery Time ...</div>';
+
+// Call Backend
+
+const result = await managerFetch('Average_Recovery_Time' , {
+    start_date: '2020-01-01' ,
+    end_date: '2025-12-31'
+});
+
+let artValues =[];
+// If valid data returned 
+if (result.success && result.data && Array.isArray(result.data.ART)) {
+    artValues = result.data.ART
+        .map(item => item.ART)
+        .filter(val => typeof val === "number" && !isNaN(val)); // cleans ART data to keep valid numbers
+        artValues.sort((a, b) => a - b);
+        console.log("ART values for histogram:", artValues); // to verify ART data is correct
+
+}
+renderAverageRecoveryTimeHistogram(artValues);
+// Histogram Code for ART
+    function renderAverageRecoveryTimeHistogram(artValues) {
+ 
+var trace = {
+    x: artValues ,
+    type: 'histogram',
+    marker : {
+            color: '#0000FF'
+
+    }
+  };
+var layout = {
+    title: 'Average Recovery Time ',
+    xaxis: { title: 'Average Recovery Time in days' },
+    yaxis: { title: 'Frequency' },
+    bargap: 0.2
+};
+
+Plotly.newPlot('art-histogram', [trace] , layout); 
+
+    }
+}
+</script>
