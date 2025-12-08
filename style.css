@@ -250,6 +250,11 @@
     font-size: 1rem;
  }
 
+#art-histogram {
+    width: 100%;
+    height: 500px;
+}
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(8px); }
