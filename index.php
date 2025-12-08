@@ -1149,6 +1149,7 @@ const bars = data.map((item, idx) => {
                         <div id="disruption-frequency-display"></div>
                     </div> 
                 </div>
+                <button id="load-td-btn" class="btn-load">Load TD Histogram</button>
             </div>
 
             <div class="panel">
