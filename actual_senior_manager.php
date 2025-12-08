@@ -1,7 +1,5 @@
-// USE THIS ONE
-
 <?php
-// actual_senior_manager.php
+// ajax_handler_manager_correct.php 
 session_start();
 
 // Database connection
@@ -63,9 +61,11 @@ switch ($action) {
         $response = companyFinancialsByRegion($conn, $region);
         break;
 
-    case 'top_distributors_volume':
-        $response = topDistributorsByVolume($conn);
+    case 'top_distributors_by_volume':
+        $search = !empty($_POST['search']) ? $_POST['search'] : '';
+        $response = topDistributorsByVolume($conn, $search);
         break;
+
 
     case 'distributor_details':
         $name = !empty($_POST['distributorName']) ? $_POST['distributorName'] : '';
@@ -674,12 +674,20 @@ return [
     ]
 ];
 }
-function topDistributorsByVolume($conn) {
+function topDistributorsByVolume($conn, $search = "") {
+    $searchEscaped = $conn->real_escape_string($search);
+
+    $where = "";
+    if ($searchEscaped !== "") {
+        $where = " AND c.CompanyName LIKE '%$searchEscaped%' OR c.CompanyID LIKE '%$searchEscaped%'";
+    }
+
     $sql = "
         SELECT c.CompanyID, c.CompanyName, SUM(s.Quantity) AS totalShipped
         FROM Distributor d
         JOIN Company c ON d.CompanyID = c.CompanyID
         JOIN Shipping s ON d.CompanyID = s.DistributorID
+        $where
         GROUP BY c.CompanyID, c.CompanyName
         ORDER BY totalShipped DESC;
     ";
