@@ -312,6 +312,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="kpi-subtitle">currently active</div>
                 </div>
             </div>
+            <div id="chart-1"></div>
             <div id="art-histogram" style="width:100%; height:350px; margin-top:25px;"></div>
         `;
 
