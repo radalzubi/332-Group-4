@@ -1003,7 +1003,7 @@ async function disruptionEventsDisplay() {
     display.innerHTML = '<div class="loading">Loading High Impact Disruptions overview...</div>';
 
 // Call Backend
-const result = await managerFetch('getHighImpactDisruptions' , {
+const result = await disruptionEventsDisplay('HDR' , {
     start_date: '2020-01-01' ,
     end_date: '2025-12-31'
 });
@@ -1095,7 +1095,7 @@ async function disruptionEventsDisplay() {
 
 // Call Backend
 
-const result = await managerFetch('Average_Recovery_Time' , {
+const result = await disruptionEventsDisplay('ART' , {
     start_date: '2020-01-01' ,
     end_date: '2025-12-31'
 });
