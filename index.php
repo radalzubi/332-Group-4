@@ -71,6 +71,10 @@ if ($page === 'scm' && $role !== 'scm') {
     <meta charset="UTF-8">
     <title>ERP System</title> 
     <link rel="stylesheet" href="style.css"> <!--connects to style.css for additional graphics-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.34.0.min.js"></script>
+
+
     <style>
         .kpi-section {
             margin-top: 20px;
@@ -960,9 +964,14 @@ const bars = data.map((item, idx) => {
                 </div>
             </div>
 
-            <div class="panel">
+            <div class="panel-wide">
                 <h2>Disruption Metrics</h2>
                 <p>DF, ART, HDR, TD calculations</p>
+                <div id="chart-1" style="margin-top: 20px;"></div>
+                <button onclick="loadHighImpactDisruptions()" class="btn-load">Load High Impact Chart</button>
+
+                <div id="art-histogram" style="margin-top: 20px;"></div>
+                <button onclick="loadAverageRecoveryTimes()" class="btn-load">Load ART Histogram</button>
             </div>
 
             <div class="panel">
@@ -993,4 +1002,146 @@ if (isset($conn) && $conn && !$conn->connect_error) {
     $conn->close();
 }
 ?>
+<script>
+// High Impact Disruption Rate: Pie Chart use function: disruptionEventsDisplay and variable HDR
 
+async function loadHighImpactDisruptions() {
+    const display = document.getElementById('chart-1');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading High Impact Disruptions overview...</div>';
+
+    const result = await supplyManagerFetch('disruptionEventsDisplay', {
+        startDate: '2020-01-01',
+        endDate: '2025-12-31'
+    });
+
+    if (!result.success || !result.data || !Array.isArray(result.data.SeverityDistribution)) {
+        display.innerHTML = `<p style="color:#f87171;">Error loading disruption data</p>`;
+        console.error("HDR error:", result);
+        return;
+    }
+
+    const severity = result.data.SeverityDistribution;
+
+    let high = 0;
+    let other = 0;
+
+    severity.forEach(item => {
+        if (item.ImpactLevel === 'High') {
+            high += Number(item.Count) || 0;
+        } else {
+            other += Number(item.Count) || 0;
+        }
+    });
+
+    const HDRChart = [
+        { label: 'High Impact Disruptions', value: high },
+        { label: 'Other Disruptions', value: other }
+    ];
+
+    display.innerHTML = '';
+    display.appendChild(renderHighImpactDisruptionsChart(HDRChart));
+}
+
+// Pie Chart for High Impact Disruptions 
+function renderHighImpactDisruptionsChart(HDRChart) {
+// config 
+const labels = HDRChart.map(item => item.label);
+const values = HDRChart.map(item => item.value);
+const config = {
+  type: 'pie',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'High Impact Disruptions',
+      data: values,
+      backgroundColor: [
+       '#FF0000' , // red for high impact
+         '#0000FF' // BLUE for other
+      ]
+    }]
+  },
+  options: {
+    responsive: false,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top'
+      },
+      title: {
+        display: true,
+        text: 'High Impact vs Other Disruptions'
+      
+      }
+    }
+  }
+  
+};
+const canvas = document.createElement('canvas');
+    canvas.width = 250; 
+    canvas.height = 250;
+    new Chart(canvas, config);
+    return canvas; 
+   
+}
+document.addEventListener('DOMContentLoaded', () => {
+    loadHighImpactDisruptions();
+});
+</script>
+
+<script>
+// Average Recovery Time supply chain Manager
+async function loadAverageRecoveryTimes() {
+    const display = document.getElementById('art-histogram');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading Average Recovery Time ...</div>';
+
+// Call Backend
+
+const result = await supplyManagerFetch('disruptionEventsDisplay' , {
+    start_date: '2020-01-01' ,
+    end_date: '2025-12-31'
+});
+
+let artValues =[];
+// If valid data returned 
+if (result.success && result.data && Array.isArray(result.data.ART)) {
+    artValues = result.data.ART
+        .map(item => item.ART)
+        .filter(val => typeof val === "number" && !isNaN(val)); // cleans ART data to keep valid numbers
+        artValues.sort((a, b) => a - b);
+        console.log("ART values for histogram:", artValues); // to verify ART data is correct
+
+}
+
+// Histogram Code for ART
+async function renderAverageRecoveryTimeHistogram(artValues) {
+
+var trace = {
+    x: artValues ,
+    type: 'histogram',
+    marker : {
+            color: '#0000FF'
+
+    }
+  };
+var layout = {
+    title: 'Average Recovery Time ',
+    xaxis: { title: 'Average Recovery Time in days' },
+    yaxis: { title: 'Frequency' },
+    bargap: 0.2,
+
+    width: 360,
+    height: 260,
+    autosize: false,
+    margin: { t: 40, l: 40, r: 10, b: 40 }
+};
+
+Plotly.newPlot('art-histogram', [trace] , layout); 
+
+    }
+    renderAverageRecoveryTimeHistogram(artValues);
+}
+</script>
