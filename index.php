@@ -289,7 +289,9 @@ if ($page === 'scm' && $role !== 'scm') {
 
 
     </style>
-    <script src="script.js" defer></script>
+
+<script src="script.js" defer></script>
+
 </head>
 <body class="app-body">
 <div class="app-shell">
@@ -306,27 +308,27 @@ if ($page === 'scm' && $role !== 'scm') {
         <!-- Team members -->
         <section class="members-row">
             <div class="member">
-                <img src="rad.jpg" alt="Rad AlZubi" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/rad.jpeg" alt="Rad AlZubi" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Rad AlZubi</span>
             </div>
             <div class="member">
-                <img src="ryder.jpg" alt="Ryder Aldrich" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/ryder.jpeg" alt="Ryder Aldrich" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Ryder Aldrich</span>
             </div>
             <div class="member">
-                <img src="natalie.jpg" alt="Natalie Anderson" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/natalie.jpeg" alt="Natalie Anderson" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Natalie Anderson</span>
             </div>
             <div class="member">
-                <img src="tani.jpg" alt="Tanitoluwa Adeleye" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/tanto.jpeg" alt="Tanitoluwa Adeleye" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Tanitoluwa Adeleye</span>
             </div>
             <div class="member">
-                <img src="anushka.jpg" alt="Anushka Heda" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/anushka.jpeg" alt="Anushka Heda" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Anushka Heda</span>
             </div>
             <div class="member">
-                <img src="jian.jpg" alt="Jian Lim" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/jian.jpeg" alt="Jian Lim" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Jian Lim</span>
             </div>
         </section>
@@ -695,14 +697,18 @@ const bars = data.map((item, idx) => {
 
 }
 
-    // Top Distributors By Volume - NEW (NEED TO CHECK)
-        async function topDistributorsByVolume() {
+// Top Distributors By Volume - NEW (NEED TO CHECK)
+    async function topDistributorsByVolume() {
         const display = document.getElementById('top-distributors-display');
         if (!display) return;
 
-        display.innerHTML = '<div class="loading">Analyzing shipment volume by distributor...</div>';
+    const searchValue = document.getElementById('distributor-search')?.value.trim() || "";
 
-        const result = await managerFetch('top_distributors_by_volume');
+    display.innerHTML = '<div class="loading">Analyzing shipment volume by distributor...</div>';
+
+    const result = await managerFetch('top_distributors_by_volume', {
+        search: searchValue
+    });
 
         if (result.success && Array.isArray(result.data)) {
             let html = '<div style="max-height: 360px; overflow-y: auto;">';
@@ -711,7 +717,7 @@ const bars = data.map((item, idx) => {
                 html += '<p style="color: #9ca3af;">No distributors found with shipment volume</p>';
             } else {
                 result.data.slice(0, 10).forEach((distributor, index) => {
-                    const volume = Number(distributor.TotalShipments || 0);
+                    const volume = Number(distributor.totalShipped || 0);
                     const color = volume > 1000 ? '#22c55e' :
                                 volume > 500  ? '#eab308' :
                                 volume > 100  ? '#f97316' : '#ef4444';
@@ -719,9 +725,6 @@ const bars = data.map((item, idx) => {
                     html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
                     html += '<div style="flex: 1;">';
                     html += '<strong>#' + (index + 1) + ' ' + (distributor.CompanyName || 'Unknown') + '</strong>';
-                    html += '<div style="font-size: 0.85em; color: #9ca3af; margin-top: 3px;">';
-                    html += (distributor.CompanyType || 'Distributor') + ' | Region: ' + (distributor.Region || 'N/A');
-                    html += '</div>';
                     html += '</div>';
                     html += '<div style="text-align: center; padding: 0 10px;">';
                     html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + color + ';">';
@@ -735,6 +738,10 @@ const bars = data.map((item, idx) => {
                     html += '</div>';
                 });
             }
+
+            if (result.data.length > 10) {
+                html += `<p style="color:#9ca3af; margin-top:10px; font-size:0.85em;">
+                This only displays the top 10 distributors. To see more distributors, search for a specific distributor name or ID.</p>`; }
 
             html += '</div>';
             display.innerHTML = html;
@@ -1133,13 +1140,14 @@ const bars = data.map((item, idx) => {
                 <h2>Disruption Metrics</h2>
                 <p>DF, ART, HDR, TD calculations</p>
 
-                <div id="charts-disruptions"> 
+                <div id="charts-disruptions" style="padding: 20px;"> 
                     <div id="chart-1"></div>
                     <div id="art-histogram"></div>
+                        <div style="width: 100%; margin-top: 20px;">
+                        <h3 style="margin: 0 0 5px 0; font-size: 1.1rem;">Disruption Frequency</h3>
+                        <div id="disruption-frequency-display"></div>
+                    </div> 
                 </div>
-
-                <button onclick="loadHighImpactDisruptions()" class="btn-load">Load High Impact Chart</button>
-                <button onclick="loadAverageRecoveryTimes()" class="btn-load">Load ART Histogram</button>
             </div>
 
             <div class="panel">
@@ -1280,6 +1288,9 @@ const canvas = document.createElement('canvas');
 }
 document.addEventListener('DOMContentLoaded', () => {
     loadHighImpactDisruptions();
+    loadAverageRecoveryTimes();
+    disruptionFrequencyByCompany();
+    topDistributorsByVolume();
 });
 </script>
 
@@ -1288,8 +1299,6 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadAverageRecoveryTimes() {
     const display = document.getElementById('art-histogram');
     if (!display) return;
-
-    display.innerHTML = '<div class="loading">Loading Average Recovery Time ...</div>';
 
 // Call Backend
 
@@ -1337,4 +1346,113 @@ Plotly.newPlot('art-histogram', [trace] , layout);
     }
     renderAverageRecoveryTimeHistogram(artValues);
 }
+
+// Disruption Frequency Overview
+async function disruptionFrequencyByCompany() {
+    const display = document.getElementById('disruption-frequency-display');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading disruption frequency by company...</div>';
+
+    const startDate = document.getElementById('disruption-start-date')?.value || '2020-01-01';
+    const endDate   = document.getElementById('disruption-end-date')?.value || '2025-12-31';
+
+    const result = await supplyManagerFetch('disruptionEventsDisplay', {
+        start_date: startDate,
+        end_date: endDate
+    });
+
+    if (result.success && result.data && Array.isArray(result.data.DF) && result.data.DF.length > 0) {
+
+        const transformed = result.data.DF
+            .filter(item => item.DF !== null)
+            .map(item => ({
+                CompanyName: item.CompanyName,
+                CompanyType: item.CompanyType || "Unknown",
+                DisruptionFrequency: Number(item.DF)
+            }))
+            .sort((a, b) => b.DisruptionFrequency - a.DisruptionFrequency);
+
+        display.innerHTML = renderDisruptionFrequencyChart(transformed);
+        return;
+    }
+
+    display.innerHTML = '<div class="trend-note error">No disruption data returned.</div>';
+}
+
+// Chart Renderer for Disruption Frequency
+function renderDisruptionFrequencyChart(data) {
+    const baseWidth = 500;
+    const width = Math.max(baseWidth, data.length * 70);
+    const height = 380;
+    const padding = 50;
+    const topPadding = 50;
+    const bottomPadding = 50;
+    const barGap = 20;
+
+    const typeColors = {
+        Manufacturer: { fill: 'rgba(254,202,202,0.9)', stroke: '#f87171' },
+        Distributor: { fill: 'rgba(252,211,77,0.75)', stroke: '#facc15' },
+        Retailer: { fill: 'rgba(134,239,172,0.85)', stroke: '#4ade80' },
+        Default: { fill: 'rgba(209,213,219,0.6)', stroke: '#9ca3af' }
+    };
+
+    const maxDF = Math.max(...data.map(d => Number(d.DisruptionFrequency)), 1);
+    const barWidth = (width - padding * 2) / data.length - barGap;
+    const chartHeight = height - topPadding - bottomPadding;
+    const scale = chartHeight / maxDF;
+
+    const bars = data.map((item, idx) => {
+        const x = padding + idx * (barWidth + barGap);
+        const barHeight = item.DisruptionFrequency * scale;
+        const y = height - bottomPadding - barHeight;
+        const colors = typeColors[item.CompanyType] || typeColors.Default;
+
+        return `
+            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+                fill="${colors.fill}" stroke="${colors.stroke}" rx="4"></rect>
+
+            <text x="${x + barWidth / 2}" y="${y - 8}"
+                text-anchor="middle" fill="#f3f4f6" font-size="11">
+                ${item.DisruptionFrequency}
+            </text>
+
+            <text transform="translate(${x + barWidth / 2}, ${y + barHeight / 2}) rotate(-90)"
+                text-anchor="middle"
+                fill="#ffffff"
+                font-size="11">
+                ${item.CompanyName}
+            </text>
+        `;
+    }).join('');
+
+    const avgDF = (
+        data.reduce((sum, d) => sum + Number(d.DisruptionFrequency), 0) / data.length
+    ).toFixed(2);
+
+    return `
+        <div class="disruption-summary">Average Disruption Frequency: ${avgDF}</div>
+
+        <div style="
+            overflow-x: auto;
+            width: 100%;
+            max-width: 100%;
+            display: block;
+            white-space: nowrap;
+        ">
+            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                <line x1="${padding}" y1="${height - bottomPadding}"
+                      x2="${width - padding}" y2="${height - bottomPadding}"
+                      stroke="#4b5563" />
+
+                <line x1="${padding}" y1="${topPadding}"
+                      x2="${padding}" y2="${height - bottomPadding}"
+                      stroke="#4b5563" />
+
+                ${bars}
+            </svg>
+        </div>
+    `;
+}
+
 </script>
