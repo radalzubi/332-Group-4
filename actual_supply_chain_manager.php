@@ -1,6 +1,9 @@
-// USE THIS ONE
-
 <?php
+date_default_timezone_set('America/New_York');
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 //actual_supply_chain_manager.php
 session_start();
 
@@ -20,6 +23,16 @@ if (!$conn || $conn->connect_error) {
         "error" => "Database connection failed"
     ]);
     exit;
+}
+
+function fetchAll($result) {
+    $rows = [];
+    if ($result instanceof mysqli_result) {
+        while ($row = $result->fetch_assoc()) {
+            $rows[] = $row;
+        }
+    }
+    return $rows;
 }
 
 $action = isset($_POST['action']) ? $_POST['action'] : '';
@@ -44,15 +57,18 @@ switch ($action) {
     default:
         echo json_encode(['success' => false, 'error' => 'Invalid action: ' . $action]);
         break;
-}
 
+}
 
 /* ===========================================================
    COMPANY INFO SEARCH
    =========================================================== */
 function companyInfoSearch($conn) {
 
-    $response = ['success' => true];
+    $response = [
+    'success' => true,
+    'data' => [] ];
+
 
     $companyName = isset($_POST['companyName']) ? $conn->real_escape_string($_POST['companyName']) : '';
     $startDate   = isset($_POST['startDate']) ? $conn->real_escape_string($_POST['startDate']) : '1000-01-01';
@@ -62,7 +78,7 @@ function companyInfoSearch($conn) {
     // 1. Basic company info
     $sql = "SELECT * FROM Company WHERE CompanyName='$companyName'";
     $result = $conn->query($sql);
-    $response['companyInfo'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['companyInfo'] = $result ? fetchAll($result) : [];
 
 
     // 2. Location
@@ -73,7 +89,7 @@ function companyInfoSearch($conn) {
     WHERE c.CompanyName='$companyName'
     ";
     $result = $conn->query($sql);
-    $response['address'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['address'] = $result ? fetchAll($result) : [];
 
 
     // 3. Dependencies
@@ -92,7 +108,7 @@ function companyInfoSearch($conn) {
     WHERE c.CompanyName='$companyName'
     ";
     $result = $conn->query($sql);
-    $response['dependencies'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['dependencies'] = $result ? fetchAll($result) : [];
 
 
     // 4. Latest Financials
@@ -105,7 +121,7 @@ function companyInfoSearch($conn) {
     LIMIT 1
     ";
     $result = $conn->query($sql);
-    $response['latestFinancial'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['latestFinancial'] = $result ? fetchAll($result) : [];
 
 
     // 5. Manufacturer Capacity
@@ -116,7 +132,7 @@ function companyInfoSearch($conn) {
     WHERE c.CompanyName='$companyName'
     ";
     $result = $conn->query($sql);
-    $response['manufacturerCapacity'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['manufacturerCapacity'] = $result ? fetchAll($result) : [];
 
 
     // 6. Distributor unique routes
@@ -130,7 +146,7 @@ function companyInfoSearch($conn) {
     GROUP BY c.CompanyName
     ";
     $result = $conn->query($sql);
-    $response['uniqueRoutes'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['uniqueRoutes'] = $result ? fetchAll($result) : [];
 
 
     // 7. Products supplied
@@ -142,7 +158,7 @@ function companyInfoSearch($conn) {
     WHERE c.CompanyName='$companyName'
     ";
     $result = $conn->query($sql);
-    $response['productsSupplied'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['productsSupplied'] = $result ? fetchAll($result) : [];
 
 
   // -------------------------
@@ -166,7 +182,7 @@ $sql = "SELECT
         ORDER BY s.ActualDate DESC";
 
 $result = $conn->query($sql);
-$response['data']['shippingTransactions'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$response['data']['shippingTransactions'] = $result ? fetchAll($result) : [];
 
 
 // -------------------------
@@ -190,7 +206,7 @@ $sql = "SELECT
         ORDER BY r.ReceivedDate DESC";
 
 $result = $conn->query($sql);
-$response['data']['receivingTransactions'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$response['data']['receivingTransactions'] = $result ? fetchAll($result) : [];
 
 
 // -------------------------
@@ -213,7 +229,7 @@ $sql = "SELECT
         ORDER BY a.AdjustmentDate DESC";
 
 $result = $conn->query($sql);
-$response['data']['adjustmentTransactions'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$response['data']['adjustmentTransactions'] = $result ? fetchAll($result) : [];
 
 
 // --------------------------------------------------------
@@ -248,7 +264,7 @@ $sql = "WITH distributorShipments AS (
         WHERE c.CompanyName = '$companyName'";
 
 $result = $conn->query($sql);
-$response['data']['distributorKPIs'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$response['data']['distributorKPIs'] = $result ? fetchAll($result) : [];
 
 
 // ----------------------------------------
@@ -281,7 +297,7 @@ $sql = "WITH LastFourQuarters AS (
         ORDER BY fr.RepYear DESC, fr.Quarter DESC";
 
 $result = $conn->query($sql);
-$response['data']['financialHealthPastYear'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$response['data']['financialHealthPastYear'] = $result ? fetchAll($result) : [];
 
 
 // ----------------------------------------
@@ -298,7 +314,7 @@ $sql = "SELECT
         ORDER BY EventCount DESC";
 
 $result = $conn->query($sql);
-$response['data']['disruptionCountsPastYear'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$response['data']['disruptionCountsPastYear'] = $result ? fetchAll($result) : [];
 
 
 // ----------------------------------------
@@ -318,7 +334,7 @@ $sql = "SELECT
         ORDER BY de.EventDate DESC";
 
 $result = $conn->query($sql);
-$response['data']['disruptionEventsPastYear'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+$response['data']['disruptionEventsPastYear'] = $result ? fetchAll($result) : [];
 
 echo json_encode($response);
 }
@@ -394,7 +410,7 @@ function disruptionEventsDisplay($conn) {
     $sql .= " ORDER BY de.EventDate DESC ";
 
     $result = $conn->query($sql);
-    $disruptions = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $disruptions = $result ? fetchAll($result) : [];
 
     $response['data']['disruptionsInRange'] = $disruptions;
 
@@ -556,7 +572,10 @@ function disruptionEventsDisplay($conn) {
    =========================================================== */
 function alertsOngoingDisruptions($conn) {
 
-    $response = ['success'=>true];
+    $response = [
+    'success' => true,
+    'data' => [] ];
+
 
     $sql = "
     SELECT c.CompanyName, de.EventID, de.EventDate AS StartDate, dc.CategoryName
@@ -570,7 +589,7 @@ function alertsOngoingDisruptions($conn) {
     ";
 
     $result = $conn->query($sql);
-    $response['ongoingAlerts'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $response['data']['ongoingAlerts'] = $result ? fetchAll($result) : [];
 
     echo json_encode($response);
 }
