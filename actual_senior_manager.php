@@ -34,8 +34,8 @@ switch ($action) {
         $response = avgFinancialHealth($conn, $startDate, $endDate, $type);
         break;
 
-    case 'regional_disruption_overview':
-        $response = regionalDisruptionOverview($conn);
+    case 'regional_disruptions':
+        $response = regionalDisruptions($conn);
         break;
 
     case 'most_critical_companies':
@@ -263,7 +263,7 @@ function avgFinancialHealth($conn, $startDate, $endDate, $type = null) {
     ];
 }
 
-function regionalDisruptionOverview($conn) {
+function regionalDisruptions($conn) {
     $sql = "
         SELECT l.ContinentName,
                COUNT(ic.EventID) AS TotalDisruptions,
@@ -302,6 +302,15 @@ function regionalDisruptionOverview($conn) {
 
 
 function mostCriticalCompanies($conn) {
+    $search = isset($_POST['search']) ? $conn->real_escape_string($_POST['search']) : "";
+    $where = "";
+    if ($search !== "") {
+        if (ctype_digit($search)) {
+            $where = "WHERE c.CompanyID = $search";
+    } else {
+        $where = "WHERE c.CompanyName LIKE '%$search%'"; }
+    }
+
     $sql = "
         SELECT c.CompanyID, c.CompanyName, c.Type,
                COUNT(DISTINCT d.DownstreamCompanyID) AS downstreamCount,
@@ -311,8 +320,9 @@ function mostCriticalCompanies($conn) {
         FROM Company c
         LEFT JOIN DependsOn d ON c.CompanyID = d.UpstreamCompanyID
         LEFT JOIN ImpactsCompany ic ON c.CompanyID = ic.AffectedCompanyID
+        $where
         GROUP BY c.CompanyID, c.CompanyName, c.Type
-        ORDER BY criticality DESC;
+        ORDER BY criticality DESC, c.CompanyName ASC;
     ";
 
     $result = $conn->query($sql);
