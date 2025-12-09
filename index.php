@@ -1586,16 +1586,17 @@ Plotly.newPlot('td-histogram', [trace] , layout);
 
 }
 
-    // Alerts for Supply Chain manager for refrence check index.php line 690 onwards TDBV
+   // Alerts for Supply Chain manager for refrence check index.php line 690 onwards TDBV
 async function alertsOngoingDisruptions() {
     const display = document.getElementById('alerts-container');
     if (!display) return;
 
     display.innerHTML = '<div class="loading">Retrieving new and ongoing alerts...</div>';
-
-    const result = await supplyManagerFetch('alerts_ongoing_disruptions', {});
+// call backend
+    const result = await supplyManagerFetch('alertsOngoingDisruptions', {});
     console.log("ALERTS API RESULT:", result);
-
+    console.log("ALERTS RAW DATA:", result.data);
+// if valid datA is returned 
     if (result.success && result.data && Array.isArray(result.data.ongoingAlerts)) {
         const alerts = result.data.ongoingAlerts;
 
