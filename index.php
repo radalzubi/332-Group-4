@@ -1571,4 +1571,76 @@ Plotly.newPlot('td-histogram', [trace] , layout);
    renderTotalDowntimeHistogram(totaldowntimeValues);
 
 }
+
+    // Alerts for Supply Chain manager for refrence check index.php line 690 onwards TDBV
+async function alertsOngoingDisruptions() {
+    const display = document.getElementById('alerts-container');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Retrieving new and ongoing alerts...</div>';
+
+    const result = await supplyManagerFetch('alerts_ongoing_disruptions', {});
+    console.log("ALERTS API RESULT:", result);
+
+    if (result.success && result.data && Array.isArray(result.data.ongoingAlerts)) {
+        const alerts = result.data.ongoingAlerts;
+
+        let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+        if (alerts.length === 0) {
+            html += '<p style="color: #9ca3af;">No ongoing alerts at this time.</p>';
+        } else {
+            alerts.slice(0, 10).forEach(alert => {
+                const startDate = alert.StartDate ? new Date(alert.StartDate) : null;
+                const daysAgo = startDate
+                    ? Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+                    : null;
+
+                const color =
+                      daysAgo <= 2  ? '#ef4444'
+                    : daysAgo <= 7  ? '#f97316'
+                    : daysAgo <= 30 ? '#eab308'
+                                    : '#22c55e';
+
+                html += `
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        padding: 10px;
+                        margin-bottom: 8px;
+                        background: rgba(31, 41, 55, 0.5);
+                        border-radius: 8px;
+                        border-left: 4px solid ${color};
+                    ">
+                        <div style="flex: 1;">
+                            <strong>${alert.CompanyName || 'Unknown Company'}</strong>
+                            <div style="font-size: 0.85em; color: #9ca3af;">Event ID: ${alert.EventID}</div>
+                            <div style="font-size: 0.85em; color: #9ca3af;">Category: ${alert.CategoryName}</div>
+                        </div>
+
+                        <div style="text-align: center; padding: 0 10px;">
+                            <div style="font-size: 1em; font-weight: bold; color: ${color};">
+                                ${startDate ? startDate.toLocaleDateString() : 'Unknown Date'}
+                            </div>
+                            <div style="font-size: 0.75em; color: ${color};">Started</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        if (alerts.length > 10) {
+            html += `
+                <p style="color:#9ca3af; margin-top:10px; font-size:0.85em; font-style: italic;">
+                    Showing only the 10 most recent alerts. More alerts exist.
+                </p>`;
+        }
+
+        html += '</div>';
+        display.innerHTML = html;
+
+    } else {
+        display.innerHTML = '<div style="color: #ef4444;">Error loading alerts.</div>';
+    }
+}
 </script>
