@@ -1267,17 +1267,26 @@ async function companiesAffectedByEvent() {
             </nav>
         </header>
 
-        <section class="grid">
-            <div class="panel">
-                <h2>Company Info</h2>
-                <div class="company-search" style="background: transparent; padding: 10px 0;">
-                    <div class="company-search-box">
-                        <input type="text" id="company-search" placeholder="Enter company name...">
-                        <button onclick="searchCompany()" class="btn-company-search">Search</button>
-                    </div>
-                    <div id="company-results"></div>
-                </div>
+            <section class="grid">
+        <div class="panel">
+        <h2>Company Info</h2>
+        <div class="company-search" style="background: transparent; padding: 10px 0;">
+            <div class="company-search-box">
+                <input 
+                    type="text" 
+                    id="company-name" 
+                    placeholder="Enter company name..."
+                >
+                <button 
+                    onclick="companyInfoSearch()" 
+                    class="btn-company-search"
+                >
+                    Search
+                </button>
             </div>
+            <div id="results"></div>
+        </div>
+    </div>
 
             <div class="panel">
                 <h2>Key KPIs</h2>
