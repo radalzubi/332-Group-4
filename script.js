@@ -503,13 +503,86 @@ async function loadSeverityStackedBar() {
     });
 }
 
-    // =========================================================
-    // AUTO-LOAD THINGS ON SCM PAGE
-    // =========================================================
-    // If the KPI panel exists, auto-load KPIs shortly after page load
+// =========================================================
+// AUTO-LOAD THINGS ON SCM PAGE
+// =========================================================
+// If the KPI panel exists, auto-load KPIs shortly after page load
     if (document.getElementById("kpi-display")) {
         setTimeout(() => {
             console.log("Auto-loading KPIs...");
             window.loadKPIs();
         }, 500);
     }
+
+async function loadDistributorChart() {
+    const result = await managerFetch("nontrivial_distributor_plot");
+
+    if (!result.success) {
+        document.getElementById("dist-chart-containers").innerHTML = "Error loading chart.";
+        return;
+    }
+
+    const labels = result.data.map(r => r.CompanyName);
+    const values = result.data.map(r => Number(r.TotalShipments));
+
+    Plotly.newPlot("dist-chart-containers", [{
+        type: "bar",
+        x: labels,
+        y: values,
+        marker: { color: "steelblue" }
+    }], {
+        title: "Top Distributors by Shipment Count"
+    });
+
+    // Auto-load table
+    renderDistributorTable(result.data);
+}
+
+function renderDistributorTable(data) {
+    let html = `<table class="simple-table"><tr>
+        <th>Distributor</th><th>Total Shipments</th></tr>`;
+
+    data.forEach(r => {
+        html += `<tr><td>${r.CompanyName}</td><td>${r.TotalShipments}</td></tr>`;
+    });
+
+    html += `</table>`;
+    document.getElementById("dist-table-container").innerHTML = html;
+}
+
+
+async function loadCriticalityChart() {
+    const result = await managerFetch("nontrivial_criticality_plot");
+
+    if (!result.success) {
+        document.getElementById("criticality-chart-container").innerHTML = "Error loading chart.";
+        return;
+    }
+
+    const labels = result.data.map(r => r.Region);
+    const values = result.data.map(r => Number(r.CriticalityScore));
+
+    Plotly.newPlot("criticality-chart-container", [{
+        type: "bar",
+        x: labels,
+        y: values,
+        marker: { color: "crimson" }
+    }], {
+        title: "Criticality by Region"
+    });
+
+    // Auto-load table
+    renderCriticalityTable(result.data);
+}
+
+function renderCriticalityTable(data) {
+    let html = `<table class="simple-table"><tr>
+        <th>Region</th><th>Criticality Score</th></tr>`;
+
+    data.forEach(r => {
+        html += `<tr><td>${r.Region}</td><td>${r.CriticalityScore}</td></tr>`;
+    });
+
+    html += `</table>`;
+    document.getElementById("criticality-table-container").innerHTML = html;
+}
