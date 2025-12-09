@@ -376,7 +376,7 @@ if ($page === 'scm' && $role !== 'scm') {
         <header class="card-header horizontal">
             <div>
                 <h1 class="app-title">Senior Manager Dashboard</h1>
-                <p class="app-subtitle">Overview, Financials, & Other Relevant Metrics</p>
+                <p class="app-subtitle">Overview, Health, & More</p>
             </div>
             <nav class="top-nav">
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
@@ -387,7 +387,16 @@ if ($page === 'scm' && $role !== 'scm') {
         <section class="grid">
             <!-- General info panel -->
              <div class="panel-wide">
+                <div class="company-search" style="background: transparent; padding: 0px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="company-search" placeholder="Find specific info by company or company ID">
+                        <button onclick="filterCompany()" class="btn-company-search">Search</button>
+                    </div>
+                    <div id="company-search-results"></div>
+                </div>
+
                 <div id="network-overview-display" style="margin-top: 15px;"></div>
+                
             </div>
             
             <script> // Auto load network overview panel
@@ -486,24 +495,7 @@ if ($page === 'scm' && $role !== 'scm') {
 
             <!-- All disruptions for specific company panel -->
             <div class="panel">
-                <h2>Associate Disruption to Company</h2>
-
-                <div style="padding: 10px 0;">
-                    <label>Company Name:</label>
-                    <input type="text" id="disruption-company-name" placeholder="e.g. Apex Corp" />
-
-                    <label>Disruption Event ID:</label>
-                    <input type="number" id="disruption-event-id" placeholder="e.g. 204" />
-
-                    <label>Severity (1-100):</label>
-                    <input type="number" id="disruption-severity" min="1" max="100" placeholder="e.g. 75" />
-
-                    <button onclick="associateDisruptionToCompany()" style="margin-top: 10px;" class="btn-company-search">
-                        Associate Disruption
-                    </button>
-                </div>
-
-                <div id="disruption-association-feedback" style="margin-top: 10px;"></div>
+                <h2>All Disruptions by Company</h2>
             </div>
 
             <!-- Distributors sorted by average delay panel -->
@@ -511,18 +503,62 @@ if ($page === 'scm' && $role !== 'scm') {
                 <h2>Distributor Average Delay (Days)</h2>
             </div>
 
-            <!-- Nontrivial plot 1 panel-->
+            <!-- Adding a new company panel -->
             <div class="panel">
-                <h2>Nontrivial Plot 1</h2>
+                <h2>Add New Company</h2>
+
+                <div style="padding: 10px 0;">
+                 <label>Company Name:</label>
+                    <input type="text" id="new-company-name" placeholder="e.g. Apex Corp" />
+
+                 <label>Company Type:</label>
+                 <select id="new-company-type">
+                      <option value="Manufacturer">Manufacturer</option>
+                      <option value="Distributor">Distributor</option>
+                      <option value="Retailer">Retailer</option>
+                    </select>
+
+                 <label>Region:</label>
+                 <input type="text" id="new-company-region" placeholder="e.g. North America" />
+
+                 <label>Tier Level:</label>
+                 <input type="number" id="new-company-tier" min="1" max="5" />
+
+                    <button onclick="addNewCompany()" style="margin-top: 10px;" class="btn-company-search">Add Company</button>
+             </div>
+
+                <div id="add-company-feedback" style="margin-top: 10px;"></div>
+            </div>
+
+            <!-- Nontrivial plot 1 panel-->
+            <div class="panel-wide">
+                <h2>Top Distributors by Shipments</h2>
+
+                <div id="dist-chart-containers" style="margin-top: 20px;"></div>
+                <button onclick="loadDistributorChart()" class="btn-load">
+                    Load Distributor Chart 
+                </button>
+
+                <h3 style="margin-top: 25px;">Distributor Table</h3>
+                <div id="dist-table-container"></div>
             </div>
 
             <!-- Nontrivial plot 2 panel -->
-            <div class="panel">
-                <h2>Nontrivial Plot 2</h2>
+            <div class="panel-wide">
+                <h2>Criticality by Region</h2>
+
+                <div id="criticality-chart-container" style="margin-top: 20px;"></div>
+                <button onclick="loadCriticalityChart()" class="btn-load">
+                    Load Criticality Chart 
+                </button>
+
+                <h3 style="margin-top: 25px;">Criticality Table</h3>
+                <div id="criticality-table-container"></div>
             </div>
 
         </section>
     </div>
+
 
 <!-- Senior Manager functions (JS) -->
     <script>
@@ -704,7 +740,7 @@ const bars = data.map((item, idx) => {
             let html = '<div style="max-height: 360px; overflow-y: auto;">';
 
             if (result.data.length === 0) {
-                html += '<p style="color: #9ca3af;">No distributors found by that name or ID.</p>';
+                html += '<p style="color: #9ca3af;">No distributors found with shipment volume</p>';
             } else {
                 result.data.slice(0, 10).forEach((distributor, index) => {
                     const volume = Number(distributor.totalShipped || 0);
@@ -1061,15 +1097,39 @@ async function mostCriticalCompanies() {
         const result = await managerFetch('get_network_overview');
         
         if (result.success && result.data) {
-            let html = '<div style="display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: max-content; gap: 15px;">';
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">';
             
-            // Total companies
-            html += '<div style="text-align: center; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3); width: 320px; min-height: 120px;">';
+            // Total Companies
+            html += '<div style="text-align: center; padding: 15px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">';
             html += '<div style="font-size: 2em; color: #60a5fa; font-weight: bold;">' + (result.data.totalCompanies || 0) + '</div>';
-            html += '<div style="color: #9ca3af; font-size: 0.85em;">Total Companies</div>';
-            if (result.data.companyTypes) { // shows type
+            html += '<div style="color: #9ca3af; font-size: 0.85em;">Companies</div>';
+            html += '</div>';
+            
+            // Connections
+            html += '<div style="text-align: center; padding: 15px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.3);">';
+            html += '<div style="font-size: 2em; color: #22c55e; font-weight: bold;">' + (result.data.totalConnections || 0) + '</div>';
+            html += '<div style="color: #9ca3af; font-size: 0.85em;">Connections</div>';
+            html += '</div>';
+            
+            // Active Disruptions
+            html += '<div style="text-align: center; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">';
+            html += '<div style="font-size: 2em; color: #ef4444; font-weight: bold;">' + (result.data.activeDisruptions || 0) + '</div>';
+            html += '<div style="color: #9ca3af; font-size: 0.85em;">Active Issues</div>';
+            html += '</div>';
+            
+            // Network Health
+            html += '<div style="text-align: center; padding: 15px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">';
+            html += '<div style="font-size: 2em; color: #f59e0b; font-weight: bold;">' + (result.data.avgNetworkHealth || 0) + '%</div>';
+            html += '<div style="color: #9ca3af; font-size: 0.85em;">Health</div>';
+            html += '</div>';
+            
+            html += '</div>';
+            
+            // Company type breakdown if available
+            if (result.data.companyTypes) {
                 html += '<div style="margin-top: 20px;">';
-                html += '<div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; width: 100%;">';
+                html += '<h4 style="color: #e5e7eb; margin: 10px 0;">Company Distribution by Type</h4>';
+                html += '<div style="display: flex; gap: 20px; flex-wrap: wrap;">';
                 
                 for (let type in result.data.companyTypes) {
                     html += '<div style="text-align: center; padding: 10px; background: rgba(31, 41, 55, 0.5); border-radius: 8px;">';
@@ -1080,119 +1140,14 @@ async function mostCriticalCompanies() {
                 
                 html += '</div></div>';
             }
-            html += '</div>';
             
-            // Overall health
-            html += '<div style="text-align: center; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3); width: 120px; min-height: 120px;">';
-            html += '<div style="font-size: 2em; color: #f59e0b; font-weight: bold;">' + (result.data.avgNetworkHealth || 0) + '%</div>';
-            html += '<div style="color: #9ca3af; font-size: 0.85em;">Overall Health</div>';
-            html += '</div>';
-            
-            // Add new company
-            html += '<div style="align-items: stretch; text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 15px; background: rgba(0, 255, 21, 0.19); border-radius: 8px; border: 1px solid rgba(9, 255, 0, 0.3); width: 120px; min-height: 120px;">';
-            html += '<button onclick="addNewCompanyPanel()" style="margin-top: 10px; width: 100%; height: 100%; padding: 5px 10px; font-size: 5em; border: none; border-radius: 6px; background: linear-gradient(135deg,#38bdf8,#6366f1); color: #134e22ff; cursor: pointer;" class="btn-load">+</button>';
-            html += '<div style="color: #ffffffff; font-weight: bold; font-size: 0.75em; padding: 5px;">New Company</div>';
-            html += '</div>';
-
-            // Appears once new company button is clicked
-            html += '<div id="add-company-form" style="display:none; margin-top:10px; max-width:320px; background:rgba(31,41,55,0.5); border:1px solid #4b5563; border-radius:8px; padding:12px;">';
-            html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">';
-            html += '<div style="font-size:0.95em; font-weight:bold; color:#e5e7eb;">Add Company</div>';
-            html += '</div>';
-            html += '<div style="display:flex; flex-direction:column; gap:8px;">';
-            html += '<input type="text" id="new-company-name" placeholder="Company Name" style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;" />';
-            html += '<select id="new-company-type" '
-                + 'style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;">'
-                + '<option value="Manufacturer">Manufacturer</option>'
-                + '<option value="Distributor">Distributor</option>'
-                + '<option value="Retailer">Retailer</option></select>';
-            html += '<input type="text" id="new-company-region" placeholder="Region" '
-                + 'style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;" />';
-            html += '<input type="number" id="new-company-tier" min="1" max="5" placeholder="Tier (1, 2, or 3)" '
-                + 'style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;" />';
-            html += '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:4px;">';
-            html += '<button onclick="addNewCompany()" '
-                + 'style="flex:1; padding:6px; font-size:0.85rem; border:none; border-radius:6px; background:linear-gradient(135deg,#38bdf8,#6366f1); color:#0b1020; cursor:pointer;">'
-                + 'Create</button>';
-            html += '<button onclick="addNewCompanyPanel()" '
-                + 'style="flex:1; padding:6px; font-size:0.85rem; border:none; border-radius:6px; background:#4b5563; color:#e5e7eb; cursor:pointer;">'
-                + 'Cancel</button>';
-            html += '</div>';
-            html += '</div>';
-            html += '<div id="add-company-feedback" style="margin-top:8px; font-size:0.8rem;"></div>';
-            html += '</div>';
-
-
-
             display.innerHTML = html;
         } else {
             display.innerHTML = '<div style="color: #ef4444;">Error loading network overview: ' + (result.error || 'Unknown error') + '</div>';
         }
     }
+    </script>
 
-// Visibility toggle function
-function addNewCompanyPanel() {
-    const form = document.getElementById('add-company-form');
-    if (!form) return;
-    form.style.display = (form.style.display === "none") ? "block" : "none";
-}
-
-
-// All disruptions for a specific company - NEW (NEED TO CHECK)
-    async function allDisruptionsForCompany() {
-        const display = document.getElementById('company-disruptions-display');
-        if (!display) return;
-
-        const companyName = document.getElementById('company-search')?.value.trim() || "";
-
-        display.innerHTML = '<div class="loading">Retrieving disruptions affecting this company...</div>';
-
-        const result = await managerFetch('disruptions_by_company', {
-            companyName: companyName
-        });
-
-        if (result.success && Array.isArray(result.data)) {
-            let html = '<div style="max-height: 360px; overflow-y: auto;">';
-
-            if (result.data.length === 0) {
-                html += '<p style="color: #9ca3af;">No disruptions found for this company</p>';
-            } else {
-                result.data.slice(0, 10).forEach((disruption, index) => {
-                    const severity = Number(disruption.severity || 0);
-                    const color = severity > 80 ? '#ef4444' :
-                                severity > 50 ? '#f97316' :
-                                severity > 20 ? '#eab308' : '#22c55e';
-
-                    html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
-                    html += '<div style="flex: 1;">';
-                    html += '<strong>' + (disruption.EventName || 'Unknown Event') + '</strong>';
-                    html += '<div style="font-size: 0.85em; color: #9ca3af;">' + (disruption.Region || 'Unknown Region') + '</div>';
-                    html += '</div>';
-                    html += '<div style="text-align: center; padding: 0 10px;">';
-                    html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + color + ';">';
-                    html += severity;
-                    html += '</div>';
-                    html += '<div style="font-size: 0.75em; color: ' + color + ';">Severity</div>';
-                    html += '</div>';
-                    html += '</div>';
-                });
-            }
-
-            if (result.data.length > 10) {
-                html += `<p style="color:#9ca3af; margin-top:10px; font-size:0.85em; font-style: italic;">
-                Showing only top 10 disruptions. Search for a specific company to narrow results.</p>`;
-            }
-
-            html += '</div>';
-            display.innerHTML = html;
-        } else {
-            display.innerHTML = '<div style="color: #ef4444;">Error loading disruptions.</div>';
-        }
-    }
-
-
-</script>
-<!-- SCM CODE -->
 <?php elseif ($page === 'scm' && $role === 'scm'): ?>
 
     <!-- SUPPLY CHAIN MANAGER DASHBOARD (supply/123) -->
