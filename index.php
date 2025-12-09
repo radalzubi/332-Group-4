@@ -71,6 +71,10 @@ if ($page === 'scm' && $role !== 'scm') {
     <meta charset="UTF-8">
     <title>ERP System</title> 
     <link rel="stylesheet" href="style.css"> <!--connects to style.css for additional graphics-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.34.0.min.js"></script>
+
+
     <style>
         .kpi-section {
             margin-top: 20px;
@@ -282,9 +286,21 @@ if ($page === 'scm' && $role !== 'scm') {
             background: rgba(34, 197, 94, 0.2);
             border-left: 4px solid #22c55e;
         }
+
+        .distributor-search-box input {
+            width: 100%;
+            max-width: 200px;
+        }
+
+        .critical-companies-search-box input {
+            width: 100%;
+            max-width: 200px;
+        }
+
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js" defer></script>
+
+<script src="script.js" defer></script>
+
 </head>
 <body class="app-body">
 <div class="app-shell">
@@ -301,27 +317,27 @@ if ($page === 'scm' && $role !== 'scm') {
         <!-- Team members -->
         <section class="members-row">
             <div class="member">
-                <img src="rad.jpg" alt="Rad AlZubi" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/rad.jpeg" alt="Rad AlZubi" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Rad AlZubi</span>
             </div>
             <div class="member">
-                <img src="ryder.jpg" alt="Ryder Aldrich" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/ryder.jpeg" alt="Ryder Aldrich" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Ryder Aldrich</span>
             </div>
             <div class="member">
-                <img src="natalie.jpg" alt="Natalie Anderson" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/natalie.jpeg" alt="Natalie Anderson" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Natalie Anderson</span>
             </div>
             <div class="member">
-                <img src="tani.jpg" alt="Tanitoluwa Adeleye" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/tanto.jpeg" alt="Tanitoluwa Adeleye" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Tanitoluwa Adeleye</span>
             </div>
             <div class="member">
-                <img src="anushka.jpg" alt="Anushka Heda" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/anushka.jpeg" alt="Anushka Heda" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Anushka Heda</span>
             </div>
             <div class="member">
-                <img src="jian.jpg" alt="Jian Lim" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
+                <img src="group_headshots/jian.jpeg" alt="Jian Lim" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Jian Lim</span>
             </div>
         </section>
@@ -407,7 +423,7 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Regional disruption overview panel -->
             <div class="panel">
                 <h2>Regional Disruptions</h2>
-                <button onclick="regionalDisruptionOverview()" class="btn-load">View</button>
+                <button onclick="regionalDisruptions()" class="btn-load">View</button>
                 <div id="regional-disruptions-display" style="margin-top: 15px;">
                     <div class="loading">Click "View" to see data</div>
                 </div>
@@ -416,9 +432,12 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Most critical companies panel -->
             <div class="panel">
                 <h2>Critical Companies</h2>
-                <button onclick="mostCriticalCompanies()" class="btn-load">View</button>
-                <div id="critical-companies-display" style="margin-top: 15px;">
-                    <div class="loading">Click "View" to see critical companies, from most critical to least critical.</div>
+                <div class="critical-companies-search" style="background: transparent; padding: 10px 0;">
+                    <div class="critical-companies-search-box">
+                        <input type="text" id="critical-companies-search" placeholder="Filter by company name or ID">
+                        <button onclick="mostCriticalCompanies()" class="btn-critical-companies-search">Find</button>
+                    </div>
+                <div id="critical-companies-display" style="margin-top: 15px;"></div>
                 </div>
             </div>
 
@@ -456,7 +475,17 @@ if ($page === 'scm' && $role !== 'scm') {
 
             <!-- Top distributors by shipment volume panel -->
             <div class="panel">
-                <h2>Top Distributors</h2>
+                <h2>Top Distributors by Shipment Volume</h2>
+
+                <div class="distributor-search" style="background: transparent; padding: 10px 0;">
+                    <div class="distributor-search-box">
+                        <input type="text" id="distributor-search" placeholder="Filter by distributor name or ID">
+                        <button onclick="topDistributorsByVolume()" class="btn-distributor-search">Find</button>
+                    </div>
+                    <div id="distributor-volume-results"></div>
+                </div>
+
+                <div id="top-distributors-display" style="margin-top: 15px;"></div>
             </div>
 
             <!-- Companies affected by disruption event panel -->
@@ -476,7 +505,29 @@ if ($page === 'scm' && $role !== 'scm') {
 
             <!-- Adding a new company panel -->
             <div class="panel">
-                <h2>Add a New Company</h2>
+                <h2>Add New Company</h2>
+
+                <div style="padding: 10px 0;">
+                 <label>Company Name:</label>
+                    <input type="text" id="new-company-name" placeholder="e.g. Apex Corp" />
+
+                 <label>Company Type:</label>
+                 <select id="new-company-type">
+                      <option value="Manufacturer">Manufacturer</option>
+                      <option value="Distributor">Distributor</option>
+                      <option value="Retailer">Retailer</option>
+                    </select>
+
+                 <label>Region:</label>
+                 <input type="text" id="new-company-region" placeholder="e.g. North America" />
+
+                 <label>Tier Level:</label>
+                 <input type="number" id="new-company-tier" min="1" max="5" />
+
+                    <button onclick="addNewCompany()" style="margin-top: 10px;" class="btn-company-search">Add Company</button>
+             </div>
+
+                <div id="add-company-feedback" style="margin-top: 10px;"></div>
             </div>
 
             <!-- Nontrivial plot 1 panel-->
@@ -487,11 +538,6 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Nontrivial plot 2 panel -->
             <div class="panel">
                 <h2>Nontrivial Plot 2</h2>
-            </div>
-
-            <div class="panel">
-                <h2>Severity Distribution</h2>
-                <canvas id = "severityChart" height = "110"></canvas>
             </div>
 
         </section>
@@ -545,13 +591,20 @@ async function avgFinancialHealth() {
 
     // If valid data returned
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const typeOrder = { Manufacturer: 0, Distributor: 1, Retailer: 2 };
         const transformed = result.data
-            .sort((a, b) => (b.avgHealthScore || 0) - (a.avgHealthScore || 0))
-            .slice(0, 8)
+            
             .map(item => ({
                 CompanyName: item.CompanyName,
+                CompanyType: item.CompanyType || 'Unknown',
                 HealthScore: Number(item.avgHealthScore) || 0
-            }));
+            }))
+            .sort((a, b) => {
+                const groupDiff = (typeOrder[a.CompanyType] ?? 99) - (typeOrder[b.CompanyType] ?? 99);
+                if (groupDiff !== 0) return groupDiff;
+                return (b.HealthScore || 0) - (a.HealthScore || 0);
+            })
+            .slice(0, 999);
 
         display.innerHTML = renderFinancialHealthChart(transformed);
         return;
@@ -567,61 +620,235 @@ async function avgFinancialHealth() {
 
 // AVG BAR CHART FOR FINANCIAL HEALTH
 function renderFinancialHealthChart(data) {
-    const width = 1000;
-    const height = 260;
-    const padding = 20;
+    const baseWidth = 500;
+    const width = Math.max(baseWidth, data.length * 60);
+    const height = 380;
+    const topPadding = 50;
+    const bottomPadding = 50;
+    const padding = 50;
+    const barGap = 20;
+
+    const typeColors = {
+        Manufacturer: { fill: 'rgba(191,219,254,0.9)', stroke: '#93c5fd' },
+        Distributor: { fill: 'rgba(96,165,250,0.75)', stroke: '#3b82f6' },
+        Retailer: { fill: 'rgba(37,99,235,0.85)', stroke: '#1d4ed8' },
+        Default: { fill: 'rgba(96,165,250,0.6)', stroke: '#3b82f6' }
+    };
     
     const maxScore = Math.max.apply(null, data.map(d => d.HealthScore).concat([1]));
-    const barWidth = (width - padding * 2) / data.length - 20;
-    const chartHeight = height - padding * 2;
+    const barWidth = (width - padding * 2) / data.length - barGap;
+    const chartHeight = height - topPadding - bottomPadding;
     const scale = chartHeight / maxScore;
 
-    const bars = data.map((item, idx) => {
-        const x = padding + idx * (barWidth + 20);
-        const barHeight = item.HealthScore * scale;
-        const y = height - padding - barHeight;
+const bars = data.map((item, idx) => {
+    const x = padding + idx * (barWidth + barGap);
+    const barHeight = item.HealthScore * scale;
+    const y = height - bottomPadding - barHeight;
+    const colors = typeColors[item.CompanyType] || typeColors.Default;
 
-        return `
-            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
-                fill="rgba(96,165,250,0.75)" stroke="#3b82f6" rx="4"></rect>
+    return `
+        <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+            fill="${colors.fill}" stroke="${colors.stroke}" rx="4"></rect>
 
-            <text x="${x + barWidth / 2}" y="${y - 8}" text-anchor="middle"
-                fill="#e5e7eb" font-size="11">${item.HealthScore}</text>
+        <!-- Health score above the bar -->
+        <text x="${x + barWidth / 2}" y="${y - 8}"
+            text-anchor="middle" fill="#e5e7eb" font-size="11">
+            ${item.HealthScore}
+        </text>
 
-            <text x="${x + barWidth / 2}" y="${height - padding + 18}" text-anchor="middle"
-                fill="#9ca3af" font-size="10">${item.CompanyName}</text>
-        `;
-    }).join('');
+        <!-- Vertical company name inside the bar -->
+        <text
+            transform="translate(${x + barWidth / 2}, ${y + barHeight / 2}) rotate(-90)"
+            text-anchor="middle"
+            fill="white"
+            font-size="11"
+            style="pointer-events:none;">
+            ${item.CompanyName}
+        </text>
+    `;
+}).join('');
 
     const avg = Math.round(data.reduce((sum, d) => sum + d.HealthScore, 0) / data.length);
 
+    const groups = data.reduce((acc, item, idx) => {
+        const type = item.CompanyType || 'Default';
+        if (!acc[type]) {
+            acc[type] = { start: idx, count: 0 };
+        }
+        acc[type].count += 1;
+        return acc;
+    }, {});
+
+    const groupOrder = ['Manufacturer', 'Distributor', 'Retailer'];
+    const groupLabels = groupOrder
+        .filter(type => groups[type])
+        .map(type => {
+            const { start, count } = groups[type];
+            const firstCenter = padding + start * (barWidth + barGap) + barWidth / 2;
+            const lastCenter = firstCenter + (count - 1) * (barWidth + barGap);
+            const center = (firstCenter + lastCenter) / 2;
+            return `<text x="${center}" y="${height - bottomPadding + 26}" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="600">${type}(s)</text>`;
+        }).join('');
+
     return `
-        <div class="trend-summary">
-            <div class="trend-chip total">
-                <div class="trend-value">${avg}</div>
-                <div class="trend-label">Avg Health Score</div>
-            </div>
+        <div class="financial-summary">Average Financial Health Score: ${avg}</div> 
+
+        <div style="overflow-x: auto; width: 100%;">
+            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
+                <!-- Axes -->
+                <line x1="${padding}" y1="${height - bottomPadding}" x2="${width - padding}" y2="${height - bottomPadding}" stroke="#4b5563" />
+                <line x1="${padding}" y1="${topPadding}" x2="${padding}" y2="${height - bottomPadding}" stroke="#4b5563" />
+
+                ${bars}
+                ${groupLabels}
+            </svg>
         </div>
+    `;
 
-        <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
-
-            <!-- Axes -->
-            <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
-            <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
-
-            ${bars}
-        </svg>
-    `; 
 }
 
+// Top distributors by volume functions
+    async function topDistributorsByVolume() {
+        const display = document.getElementById('top-distributors-display');
+        if (!display) return;
+
+    const searchValue = document.getElementById('distributor-search')?.value.trim() || "";
+
+    display.innerHTML = '<div class="loading">Analyzing shipment volume by distributor...</div>';
+
+    const result = await managerFetch('top_distributors_by_volume', {
+        search: searchValue
+    });
+
+        if (result.success && Array.isArray(result.data)) {
+            let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+            if (result.data.length === 0) {
+                html += '<p style="color: #9ca3af;">No distributors found with shipment volume</p>';
+            } else {
+                result.data.slice(0, 10).forEach((distributor, index) => {
+                    const volume = Number(distributor.totalShipped || 0);
+                    const color = volume > 1000 ? '#22c55e' :
+                                volume > 500  ? '#eab308' :
+                                volume > 100  ? '#f97316' : '#ef4444';
+
+                    html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
+                    html += '<div style="flex: 1;">';
+                    html += '<strong>' + (distributor.CompanyName || 'Unknown') + '</strong>';
+                    html += '</div>';
+                    html += '<div style="text-align: center; padding: 0 10px;">';
+                    html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + color + ';">';
+                    html += volume;
+                    html += '</div>';
+                    html += '<div style="font-size: 0.75em; color: ' + color + ';">';
+                    html += 'Shipments';
+                    html += '</div></div>';
+                    html += '</div>';
+                });
+            }
+
+            if (result.data.length > 10) {
+                html += `<p style="color:#9ca3af; margin-top:10px; font-size:0.85em; font-style: italic;">
+                This only displays the top 10 distributors. To see more distributors, search for a specific distributor name or ID.</p>`; }
+
+            html += '</div>';
+            display.innerHTML = html;
+        } else {
+            display.innerHTML = '<div style="color: #ef4444;">Error loading top distributors.</div>';
+        }
+    }
+
+    // Company Financials By Region - NEW (NEED TO CHECK)
+        async function companyFinancialsByRegion() {
+        const display = document.getElementById('regional-financials-display');
+        if (!display) return;
+
+        display.innerHTML = '<div class="loading">Loading company financials by region...</div>';
+
+        const startDate = document.getElementById('finance-start-date')?.value || '2020-01-01';
+        const endDate   = document.getElementById('finance-end-date')?.value || '2025-12-31';
+        const companyType = document.getElementById('company-type-select')?.value || '';
+
+        const result = await managerFetch('avg_financial_health', {
+            startDate,
+            endDate,
+            companyType
+        });
+
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+            let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+            result.data.forEach((company, index) => {
+                const health = Number(company.avgHealthScore) || 0;
+                const color = health >= 80 ? '#22c55e' :
+                            health >= 60 ? '#eab308' :
+                            health >= 40 ? '#f97316' : '#ef4444';
+
+                html += `<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 10px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ${color};">`;
+
+                html += `<div style="flex: 1;">`;
+                html += `<strong>#${index + 1} ${company.CompanyName || 'Unknown'}</strong>`;
+                html += `<div style="font-size: 0.85em; color: #9ca3af; margin-top: 2px;">${company.CompanyType || 'Unknown'} | ${company.Region || 'Unknown Region'}</div>`;
+                html += `</div>`;
+
+                html += `<div style="text-align: center; padding: 0 10px;">`;
+                html += `<div style="font-size: 1.2em; font-weight: bold; color: ${color};">${health.toFixed(1)}</div>`;
+                html += `<div style="font-size: 0.75em; color: ${color};">Health Score</div>`;
+                html += `</div>`;
+
+                html += `<div style="padding-left: 10px;"><button onclick="viewCompanyDetails('${company.CompanyName}')" style="font-size: 0.75em; padding: 4px 8px; background: #1f2937; border: 1px solid #4b5563; border-radius: 4px; color: #93c5fd;">View</button></div>`;
+
+                html += `</div>`;
+            });
+
+            html += '</div>';
+            display.innerHTML = html;
+        } else {
+            display.innerHTML = '<div style="color: #ef4444;">No company financial data available.</div>';
+        }
+    }
+
+    // Add New Company - NEW (NEED TO CHECK)
+    async function addNewCompany() {
+        const name = document.getElementById('new-company-name').value.trim();
+        const type = document.getElementById('new-company-type').value;
+        const region = document.getElementById('new-company-region').value.trim();
+        const tier = parseInt(document.getElementById('new-company-tier').value);
+        const feedback = document.getElementById('add-company-feedback');
+
+        if (!name || !region || isNaN(tier)) {
+            feedback.innerHTML = '<div style="color: #f87171;">Please fill in all required fields.</div>';
+            return;
+        }
+
+        feedback.innerHTML = '<div class="loading">Adding company...</div>';
+
+        const result = await managerFetch('add_new_company', {
+            name,
+            type,
+            region,
+            tier
+        });
+
+        if (result.success) {
+            feedback.innerHTML = '<div style="color: #22c55e;">Company added successfully!</div>';
+            // Optionally clear the form
+            document.getElementById('new-company-name').value = '';
+            document.getElementById('new-company-region').value = '';
+            document.getElementById('new-company-tier').value = '';
+        } else {
+            feedback.innerHTML = `<div style="color: #f87171;">Error: ${result.error || 'Failed to add company.'}</div>`;
+        }
+    }
+
     // Regional Disruptions - COMPLETE
-    async function regionalDisruptionOverview() {
+    async function regionalDisruptions() {
         const display = document.getElementById('regional-disruptions-display');
         if (!display) return;
         
         display.innerHTML = '<div class="loading">Loading regional data...</div>';
         
-        const result = await managerFetch('regional_disruption_overview', {
+        const result = await managerFetch('regional_disruptions', {
             startDate: '2020-01-01',
             endDate: '2025-12-31'
         });
@@ -767,53 +994,82 @@ function renderFinancialHealthChart(data) {
             </svg>
         `;
     }
-        
-    // Critical Companies - COMPLETE
-    async function mostCriticalCompanies() {
-        const display = document.getElementById('critical-companies-display');
-        if (!display) return;
-        
-        display.innerHTML = '<div class="loading">Analyzing network criticality...</div>';
-        
-        const result = await managerFetch('most_critical_companies');
-        
-        if (result.success && result.data) {
-            let html = '<div style="max-height: 300px; overflow-y: auto;">';
-            
-            if (result.data.length === 0) {
-                html += '<p style="color: #9ca3af;">No critical companies identified</p>';
-            } else {
-                result.data.slice(0, 10).forEach(function(company, index) {
-                    const riskColor = company.RiskLevel === 'Critical' ? '#ef4444' : 
-                                     company.RiskLevel === 'High' ? '#f59e0b' : 
-                                     company.RiskLevel === 'Medium' ? '#eab308' : '#22c55e';
-                    
-                    html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + riskColor + ';">';
-                    html += '<div style="flex: 1;">';
-                    html += '<strong>#' + (index + 1) + ' ' + (company.CompanyName || 'Unknown') + '</strong>';
-                    html += '<div style="font-size: 0.85em; color: #9ca3af; margin-top: 3px;">';
-                    html += (company.CompanyType || 'Unknown') + ' | Tier ' + (company.TierLevel || '?');
-                    html += '</div>';
-                    html += '<div style="font-size: 0.85em; color: #9ca3af;">';
-                    html += (company.DownstreamDependencies || 0) + ' downstream | ';
-                    html += (company.HighImpactDisruptions || 0) + ' high-impact events';
-                    html += '</div></div>';
-                    html += '<div style="text-align: center; padding: 0 10px;">';
-                    html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + riskColor + ';">';
-                    html += company.CriticalityScore || 0;
-                    html += '</div>';
-                    html += '<div style="font-size: 0.75em; color: ' + riskColor + ';">';
-                    html += company.RiskLevel || 'Low';
-                    html += '</div></div></div>';
-                });
-            }
-            
-            html += '</div>';
-            display.innerHTML = html;
+
+// Most critical companies function
+async function mostCriticalCompanies() {
+    const display = document.getElementById('critical-companies-display');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Analyzing network criticality...</div>';
+
+    const searchValue = document.getElementById('critical-companies-search')?.value.trim() || "";
+    const result = await managerFetch('most_critical_companies', { search: searchValue });
+
+
+    if (result.success && Array.isArray(result.data)) {
+        let html = '<div style="max-height: 300px; overflow-y: auto;">';
+
+        if (result.data.length === 0) {
+            html += '<p style="color: #9ca3af;">No critical companies identified</p>';
         } else {
-            display.innerHTML = '<div style="color: #ef4444;">Error loading critical companies</div>';
+            result.data.slice(0, 25).forEach((company, index) => {
+
+                const downstream = Number(company.DownstreamCount || 0);
+                const highImpact = Number(company.HighImpactCount || 0);
+
+                // Criticality Formula
+                const criticalityScore = downstream * highImpact;
+
+                // Color scheme based on score
+                const color =
+                    criticalityScore > 20 ? '#ef4444' :     // red (severe)
+                    criticalityScore > 10 ? '#f97316' :     // orange (high)
+                    criticalityScore > 5  ? '#eab308' :     // yellow (medium)
+                                            '#22c55e';      // green (low)
+
+                html += `
+                    <div style="
+                        display: flex;
+                        align-items: center;
+                        padding: 10px;
+                        margin-bottom: 8px;
+                        background: rgba(31, 41, 55, 0.5);
+                        border-radius: 8px;
+                        border-left: 4px solid ${color};
+                    ">
+
+                        <div style="flex: 1;">
+                            <strong>#${index + 1} ${company.CompanyName || 'Unknown'}</strong>
+                            <div style="font-size: 0.85em; color: #9ca3af; margin-top: 3px;">
+                                ${company.CompanyType || 'Unknown'}
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; padding: 0 10px;">
+                            <div style="font-size: 1.2em; font-weight: bold; color: ${color};">
+                                ${criticalityScore}
+                            </div>
+                            <div style="font-size: 0.75em; color: ${color};">
+                                Criticality Score
+                            </div>
+                        </div>
+
+                    </div>
+                `;
+            });
         }
+
+        if (result.data.length > 25) {
+                html += `<p style="color:#9ca3af; margin-top:10px; font-size:0.85em; font-style: italic;">
+                This only displays the most critical 25 companies. To see more companies, search for a specific company name or ID.</p>`; }
+        html += '</div>';
+        display.innerHTML = html;
+
+    } else {
+        display.innerHTML = '<div style="color: #ef4444;">Error loading critical companies</div>';
     }
+}
+
 
     // Network Overview - COMPLETE
     async function getNetworkOverview() {
@@ -917,11 +1173,24 @@ function renderFinancialHealthChart(data) {
                 </div>
             </div>
 
-            <div class="panel">
-                <h2>Disruption Metrics</h2>
-                <p>DF, ART, HDR, TD calculations</p>
-                <canvas id = "severityRegionChart" style = "margin-top: 15px; max-height: 320px;"></canvas>
+    <!-- Disruption Metrics panel -->
+        <div class="panel-wide">
+            <h2>Disruption Metrics</h2>
+            <p>HDR, ART, TD, DF</p>
+
+            <div id="charts-disruptions" style="padding: 20px;"> 
+                <div class="disruptions-123">
+                    <div class="charts-123"><div id="chart-1"></div></div>
+                    <div class="charts-123"><div id="art-histogram"></div></div>
+                    <div class="charts-123"><div id="td-histogram"></div></div>
+                 </div>
+
+                <div class="disruptions-4">
+                    <h3 style="margin: 0 0 5px 0; font-size: 1.1rem;">Disruption Frequency</h3>
+                    <div id="disruption-frequency-display"></div>
+                </div>
             </div>
+        </div>
 
             <div class="panel">
                 <h2>Alerts</h2>
@@ -930,15 +1199,33 @@ function renderFinancialHealthChart(data) {
                 </div>
             </div>
 
-            <div class="panel-wide">
-                <h2>Regional Disruption Overview</h2>
-                <p>Global heatmap showing total disruption counts by continent</p>
+            <div class="panel">
+                <h2>Regional Risk Concentration<h2>
+                <p></p>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                <input type="text" id="heatmap-location-id" placeholder="Enter Location ID (optional)">
+                <button onclick="rrcHeatmap()" class="btn-load">Load Heatmap</button>
+            </div>
 
-                <button onclick="loadRegionalHeatMap()" class="btn-load">Load Global Heatmap</button>
+                <div id="rrc-heatmap-display" style="margin-top: 15px;">
+                    <div class="loading">Click "Load Heatmap" to see data.</div>
+                </div>
+            </div>
 
-                <div id="regional-heatmap" style="margin-top: 20px; width: 100%; min-height: 420px;"></div>
+            <div class="panel">
+                <h2>Severity Distribution</h2>
+                <p>Low/Medium/High stacked chart</p>
+                <div style="magin-top: 20px;">
+                    <canvas id="severityChart" width="200" height="400"></canvas>
+                </div>
+
+                <button onclick="loadSeverityStackedBar()" class="btn-load severity-btn">
+                    Load Severity Distribution
+                </button>
+            </div>
         </section>
     </div>
+</div>
 
 <?php else: ?>
 
@@ -959,4 +1246,314 @@ if (isset($conn) && $conn && !$conn->connect_error) {
     $conn->close();
 }
 ?>
+<script>
+// High Impact Disruption Rate: Pie Chart use function: disruptionEventsDisplay and variable HDR
 
+async function loadHighImpactDisruptions() {
+    const display = document.getElementById('chart-1');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading charts...</div>';
+
+    const result = await supplyManagerFetch('disruptionEventsDisplay', {
+        startDate: '2020-01-01',
+        endDate: '2025-12-31'
+    });
+
+    if (!result.success || !result.data || !Array.isArray(result.data.SeverityDistribution)) {
+        display.innerHTML = `<p style="color:#f87171;">Error loading disruption data</p>`;
+        console.error("HDR error:", result);
+        return;
+    }
+
+    const severity = result.data.SeverityDistribution;
+
+    let high = 0;
+    let other = 0;
+
+    severity.forEach(item => {
+        if (item.ImpactLevel === 'High') {
+            high += Number(item.Count) || 0;
+        } else {
+            other += Number(item.Count) || 0;
+        }
+    });
+
+    const HDRChart = [
+        { label: 'High Impact Disruptions', value: high },
+        { label: 'Other Disruptions', value: other }
+    ];
+
+    display.innerHTML = '';
+    display.appendChild(renderHighImpactDisruptionsChart(HDRChart));
+}
+
+// Pie Chart for High Impact Disruptions 
+function renderHighImpactDisruptionsChart(HDRChart) {
+// config 
+const labels = HDRChart.map(item => item.label);
+const values = HDRChart.map(item => item.value);
+const config = {
+  type: 'pie',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'High Impact Disruptions',
+      data: values,
+      backgroundColor: [
+       '#FF0000' , // red for high impact
+         '#0000FF' // BLUE for other
+      ]
+    }]
+  },
+  options: {
+    responsive: false,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top'
+      },
+      title: {
+        display: true,
+        text: 'High Impact vs Other Disruptions'
+      
+      }
+    }
+  }
+  
+};
+const canvas = document.createElement('canvas');
+    canvas.width = 250; 
+    canvas.height = 250;
+    new Chart(canvas, config);
+    return canvas; 
+   
+}
+document.addEventListener('DOMContentLoaded', () => {
+    loadHighImpactDisruptions();
+    loadAverageRecoveryTimes();
+    disruptionFrequencyByCompany();
+    topDistributorsByVolume();
+    mostCriticalCompanies();
+});
+</script>
+
+<script>
+// Average Recovery Time supply chain Manager
+async function loadAverageRecoveryTimes() {
+    const display = document.getElementById('art-histogram');
+    if (!display) return;
+
+// Call Backend
+
+const result = await supplyManagerFetch('disruptionEventsDisplay' , {
+    start_date: '2020-01-01' ,
+    end_date: '2025-12-31'
+});
+
+let artValues =[];
+// If valid data returned 
+if (result.success && result.data && Array.isArray(result.data.ART)) {
+    artValues = result.data.ART
+        .map(item => item.ART)
+        .filter(val => typeof val === "number" && !isNaN(val)); // cleans ART data to keep valid numbers
+        artValues.sort((a, b) => a - b);
+        console.log("ART values for histogram:", artValues); // to verify ART data is correct
+
+}
+
+// Histogram Code for ART
+async function renderAverageRecoveryTimeHistogram(artValues) {
+
+var trace = {
+    x: artValues ,
+    type: 'histogram',
+    marker : {
+            color: '#0000FF'
+
+    }
+  };
+var layout = {
+    title: 'Average Recovery Time ',
+    xaxis: { title: 'Average Recovery Time in days' },
+    yaxis: { title: 'Frequency' },
+    bargap: 0.2,
+
+    width: 280,
+    height: 320,
+    autosize: false,
+    margin: { t: 35, l: 35, r: 5, b: 35 }
+};
+
+Plotly.newPlot('art-histogram', [trace] , layout); 
+
+    }
+    renderAverageRecoveryTimeHistogram(artValues);
+
+    loadTotalDowntime();
+
+}
+
+// Disruption Frequency Overview
+async function disruptionFrequencyByCompany() {
+    const display = document.getElementById('disruption-frequency-display');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Loading disruption frequency by company...</div>';
+
+    const startDate = document.getElementById('disruption-start-date')?.value || '2020-01-01';
+    const endDate   = document.getElementById('disruption-end-date')?.value || '2025-12-31';
+
+    const result = await supplyManagerFetch('disruptionEventsDisplay', {
+        start_date: startDate,
+        end_date: endDate
+    });
+
+    if (result.success && result.data && Array.isArray(result.data.DF) && result.data.DF.length > 0) {
+
+        const transformed = result.data.DF
+            .filter(item => item.DF !== null)
+            .map(item => ({
+                CompanyName: item.CompanyName,
+                CompanyType: item.CompanyType || "Unknown",
+                DisruptionFrequency: Number(item.DF)
+            }))
+            .sort((a, b) => b.DisruptionFrequency - a.DisruptionFrequency);
+
+        display.innerHTML = renderDisruptionFrequencyChart(transformed);
+        return;
+    }
+
+    display.innerHTML = '<div class="trend-note error">No disruption data returned.</div>';
+}
+
+// Chart Renderer for Disruption Frequency
+function renderDisruptionFrequencyChart(data) {
+    const baseWidth = 500;
+    const width = Math.max(baseWidth, data.length * 70);
+    const height = 380;
+    const padding = 50;
+    const topPadding = 50;
+    const bottomPadding = 50;
+    const barGap = 20;
+
+    const typeColors = {
+        Manufacturer: { fill: 'rgba(254,202,202,0.9)', stroke: '#f87171' },
+        Distributor: { fill: 'rgba(252,211,77,0.75)', stroke: '#facc15' },
+        Retailer: { fill: 'rgba(134,239,172,0.85)', stroke: '#4ade80' },
+        Default: { fill: 'rgba(209,213,219,0.6)', stroke: '#9ca3af' }
+    };
+
+    const maxDF = Math.max(...data.map(d => Number(d.DisruptionFrequency)), 1);
+    const barWidth = (width - padding * 2) / data.length - barGap;
+    const chartHeight = height - topPadding - bottomPadding;
+    const scale = chartHeight / maxDF;
+
+    const bars = data.map((item, idx) => {
+        const x = padding + idx * (barWidth + barGap);
+        const barHeight = item.DisruptionFrequency * scale;
+        const y = height - bottomPadding - barHeight;
+        const colors = typeColors[item.CompanyType] || typeColors.Default;
+
+        return `
+            <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}"
+                fill="${colors.fill}" stroke="${colors.stroke}" rx="4"></rect>
+
+            <text x="${x + barWidth / 2}" y="${y - 8}"
+                text-anchor="middle" fill="#f3f4f6" font-size="11">
+                ${item.DisruptionFrequency}
+            </text>
+
+            <text transform="translate(${x + barWidth / 2}, ${y + barHeight / 2}) rotate(-90)"
+                text-anchor="middle"
+                fill="#ffffff"
+                font-size="11">
+                ${item.CompanyName}
+            </text>
+        `;
+    }).join('');
+
+    const avgDF = (
+        data.reduce((sum, d) => sum + Number(d.DisruptionFrequency), 0) / data.length
+    ).toFixed(2);
+
+    return `
+        <div class="disruption-summary">Average Disruption Frequency: ${avgDF}</div>
+
+        <div style="
+            overflow-x: auto;
+            width: 100%;
+            max-width: 100%;
+            display: block;
+            white-space: nowrap;
+        ">
+            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                <line x1="${padding}" y1="${height - bottomPadding}"
+                      x2="${width - padding}" y2="${height - bottomPadding}"
+                      stroke="#4b5563" />
+
+                <line x1="${padding}" y1="${topPadding}"
+                      x2="${padding}" y2="${height - bottomPadding}"
+                      stroke="#4b5563" />
+
+                ${bars}
+            </svg>
+        </div>
+    `;
+}
+
+// Total Downtime  
+async function loadTotalDowntime() { 
+    const display = document.getElementById('td-histogram');
+    if (!display) return;
+
+    // display.innerHTML = '<div class="loading">Loading Total Downtime ...</div>'; // can't get to disappear after chart is loaded..
+
+// Call Backend
+
+const result = await supplyManagerFetch('disruptionEventsDisplay' , {
+    start_date: '2020-01-01' ,
+    end_date: '2025-12-31'
+});
+
+let totaldowntimeValues =[];
+// If valid data returned 
+ if (result.success && result.data && Array.isArray(result.data.TD)) {
+    totaldowntimeValues = result.data.TD   
+        .map(item => Number(item.TD))   // 
+        .filter(val => !isNaN(val) && val !== null);
+        totaldowntimeValues.sort((a, b) => a - b);
+        //console.log("TD values for histogram:", totaldowntimeValues); // to verify TD data is correct
+        console.log("RAW TD:", result.data.TD); 
+        console.log("TD values after cleaning:", totaldowntimeValues);
+    }
+
+// Histogram Code for TD
+async function renderTotalDowntimeHistogram(totaldowntimeValues) {
+
+var trace = {
+    x: totaldowntimeValues ,
+    type: 'histogram',
+    marker : {
+            color: '#008000'
+
+    }
+  };
+    var layout = {
+    title: 'Total Downtime ',
+    xaxis: { title: 'Total Downtime in Days' },
+    yaxis: { title: 'Frequency' },
+    bargap: 0.2,
+
+    width: 280,
+    height: 320,
+    autosize: false,
+    margin: { t: 35, l: 35, r: 5, b: 35 }
+};
+Plotly.newPlot('td-histogram', [trace] , layout);
+
+}
+   renderTotalDowntimeHistogram(totaldowntimeValues);
+
+}
+</script>
