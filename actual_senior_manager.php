@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // ajax_handler_manager_correct.php 
 session_start();
 
@@ -74,12 +78,16 @@ switch ($action) {
 
     case 'companies_by_event':
         $eventID = isset($_POST['eventID']) ? (int)$_POST['eventID'] : 0;
-        $response = companiesAffectedByDisruptionEvent($conn, $eventID);
+        $eventName = isset($_POST['eventName']) ? trim($_POST['eventName']) : '';
+        $response = companiesAffectedByDisruptionEvent($conn, $eventID, $eventName);
         break;
 
     case 'disruptions_by_company':
-        $name = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
-        $response = getDisruptionsByCompanyName($conn, $name);
+        $search = isset($_POST['companyQuery']) ? trim($_POST['companyQuery']) : '';
+        if ($search === '' && !empty($_POST['companyName'])) {
+            $search = trim($_POST['companyName']);
+        }
+        $response = getDisruptionsByCompanyName($conn, $search);
         break;
 
     case 'distributors_by_delay':
@@ -87,12 +95,33 @@ switch ($action) {
         break;
 
     case 'add_new_company':
-        $name = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
+        $name     = isset($_POST['companyName']) ? trim($_POST['companyName']) : '';
         $location = isset($_POST['locationID']) ? (int)$_POST['locationID'] : 0;
-        $tier = !empty($_POST['tierLevel']) ? $_POST['tierLevel'] : '';
-        $type = !empty($_POST['companyType']) ? $_POST['companyType'] : '';
-        $response = addNewCompany($conn, $name, $location, $tier, $type);
-        break;
+        $tier     = isset($_POST['tierLevel']) ? (int)$_POST['tierLevel'] : 0;
+        $type     = isset($_POST['companyType']) ? trim($_POST['companyType']) : '';
+
+    // Hard validation
+        if ($name === '' || $location < 1 || $location > 13 || $tier < 1 || $tier > 3) {
+            echo json_encode([
+                'success' => false,
+                'error'   => 'Invalid input. Ensure all fields are filled correctly.'
+            ]);
+            return;
+        }
+
+    // Must be manufacturer, distributor, retailer
+    $validTypes = ['Manufacturer', 'Distributor', 'Retailer'];
+    if (!in_array($type, $validTypes)) {
+        echo json_encode([
+            'success' => false,
+            'error'   => 'Invalid company type.'
+        ]);
+        return;
+    }
+    $response = addNewCompany($conn, $name, $location, $tier, $type);
+    break;
+
+
 
     case 'criticality_by_region':
         $response = getCriticalityByRegion($conn);
@@ -804,14 +833,35 @@ function distributorDetailsByName($conn, $distributorName) {
 }
 
 
-function companiesAffectedByDisruptionEvent($conn, $eventID) {
+function companiesAffectedByDisruptionEvent($conn, $eventID, $eventName = '') {
     $eventID = (int)$eventID;
+    $eventName = trim($eventName);
+
+    if ($eventID <= 0 && $eventName === '') {
+        return [
+            'success' => false,
+            'error' => 'Event name or ID is required.'
+        ];
+    }
+
+    $conditions = [];
+    if ($eventID > 0) {
+        $conditions[] = "ic.EventID = $eventID";
+    }
+    if ($eventName !== '') {
+        $safeName = $conn->real_escape_string($eventName);
+        $conditions[] = "dc.CategoryName LIKE '%$safeName%'";
+    }
+
+    $whereClause = implode(' OR ', $conditions);
 
     $sql = "
-        SELECT c.CompanyID, c.CompanyName, ic.ImpactLevel
+        SELECT c.CompanyID, c.CompanyName, ic.ImpactLevel, ic.CategoryID, dc.CategoryName
         FROM ImpactsCompany ic
-        JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
-        WHERE ic.EventID = $eventID
+            JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+            JOIN DisruptionEvent de ON ic.CategoryID = de.CategoryID
+            LEFT JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
+        WHERE $whereClause
         ORDER BY c.CompanyName;
     ";
 
@@ -828,7 +878,9 @@ function companiesAffectedByDisruptionEvent($conn, $eventID) {
         $rows[] = [
             'CompanyID' => $row['CompanyID'],
             'CompanyName' => $row['CompanyName'],
-            'ImpactLevel' => $row['ImpactLevel']
+            'ImpactLevel' => $row['ImpactLevel'],
+            'CategoryID' => $row['CategoryID'],
+            'CategoryName' => $row['CategoryName']
         ];
     }
 
@@ -838,18 +890,28 @@ function companiesAffectedByDisruptionEvent($conn, $eventID) {
     ];
 }
 
-function getDisruptionsByCompanyName($conn, $companyName) {
-    $companyEscaped = $conn->real_escape_string($companyName);
+function getDisruptionsByCompanyName($conn, $searchTerm) {
+    $query = trim($searchTerm);
+    if ($query === '') {
+        return [
+            'success' => false,
+            'error' => 'Company name or ID is required.'
+        ];
+    }
+
+    $searchEscaped = $conn->real_escape_string($query);
 
     $sql = "
         SELECT de.EventID, de.EventDate, de.EventRecoveryDate,
-               dc.CategoryName, ic.ImpactLevel
+            dc.CategoryName, ic.ImpactLevel,
+            c.CompanyID, c.CompanyName
         FROM ImpactsCompany ic
         JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
         JOIN DisruptionEvent de ON ic.EventID = de.EventID
         JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
-        WHERE c.CompanyName = '$companyEscaped'
-        ORDER BY de.EventDate;
+        WHERE ('$searchEscaped' REGEXP '^[0-9]+$' AND c.CompanyID = '$searchEscaped') 
+        OR ('$searchEscaped' NOT REGEXP '^[0-9]+$' AND c.CompanyName LIKE '%$searchEscaped%')
+        ORDER BY de.EventDate DESC;
     ";
 
     $result = $conn->query($sql);
@@ -868,7 +930,9 @@ function getDisruptionsByCompanyName($conn, $companyName) {
             'EventDate' => $row['EventDate'],
             'EventRecoveryDate' => $row['EventRecoveryDate'],
             'CategoryName' => $row['CategoryName'],
-            'ImpactLevel' => $row['ImpactLevel']
+            'ImpactLevel' => $row['ImpactLevel'],
+            'CompanyID' => $row['CompanyID'],
+            'CompanyName' => $row['CompanyName']
         ];
     }
 
@@ -916,45 +980,68 @@ function distributorsByAverageDelay($conn) {
 }
 
 function addNewCompany($conn, $companyName, $locationID, $tierLevel, $companyType) {
+
     $companyEscaped = $conn->real_escape_string($companyName);
-    $tierEscaped    = $conn->real_escape_string($tierLevel);
     $typeEscaped    = $conn->real_escape_string($companyType);
     $locationID     = (int)$locationID;
+    $tierLevel      = (int)$tierLevel;
+
+    // Disable autocommit for manual transaction control
+    $conn->autocommit(FALSE);
 
     try {
-        $conn->begin_transaction();
 
-        // Insert into Company
+        // Insert into Company table
         $sqlCompany = "
             INSERT INTO Company (CompanyName, LocationID, TierLevel, Type)
-            VALUES ('$companyEscaped', $locationID, '$tierEscaped', '$typeEscaped');
+            VALUES ('$companyEscaped', $locationID, $tierLevel, '$typeEscaped')
         ";
+
         if (!$conn->query($sqlCompany)) {
             throw new Exception("Company insert failed: " . $conn->error);
         }
 
         $newCompanyID = $conn->insert_id;
 
-        // Insert into specific type table
+        // Insert into the specific type table
         switch ($companyType) {
-            case "Distributor":
-                $sqlType = "INSERT INTO Distributor (CompanyID) VALUES ($newCompanyID);";
-                break;
+
             case "Manufacturer":
-                $sqlType = "INSERT INTO Manufacturer (CompanyID, FactoryCapacity) VALUES ($newCompanyID, 0);";
+                $sqlType = "
+                    INSERT INTO Manufacturer (CompanyID, FactoryCapacity)
+                    VALUES ($newCompanyID, 0)
+                ";
                 break;
+
+            case "Distributor":
+                $sqlType = "
+                    INSERT INTO Distributor (CompanyID)
+                    VALUES ($newCompanyID)
+                ";
+                break;
+
             case "Retailer":
-                $sqlType = "INSERT INTO Retailer (CompanyID) VALUES ($newCompanyID);";
+                $sqlType = "
+                    INSERT INTO Retailer (CompanyID)
+                    VALUES ($newCompanyID)
+                ";
                 break;
+
             default:
-                throw new Exception("Company must be a Distributor, Manufacturer, or Retailer.");
+                throw new Exception("Invalid company type.");
         }
 
         if (!$conn->query($sqlType)) {
-            throw new Exception("Type insert failed: " . $conn->error);
+            throw new Exception("Subtype insert failed: " . $conn->error);
         }
 
-        $conn->commit();
+        // Commit the transaction
+        if (!$conn->commit()) {
+            throw new Exception("Commit failed: " . $conn->error);
+        }
+
+        // Re-enable autocommit
+        $conn->autocommit(TRUE);
 
         return [
             'success' => true,
@@ -963,13 +1050,17 @@ function addNewCompany($conn, $companyName, $locationID, $tierLevel, $companyTyp
         ];
 
     } catch (Exception $e) {
+        // Roll back on error
         $conn->rollback();
+        $conn->autocommit(TRUE);
+
         return [
             'success' => false,
             'error' => $e->getMessage()
         ];
     }
 }
+
 
 
 
