@@ -101,6 +101,15 @@ switch ($action) {
     case 'top_distributors_shipments':
         $response = topDistributorsByNumberOfShipments($conn);
         break;
+
+    case "nontrivial_distributor_plot":
+        $response = nontrivialDistributorPlot($conn);
+        break;
+
+    case "nontrivial_criticality_plot":
+        $response = nontrivialCriticalityPlot($conn);
+        break;
+
     
   default:
         $response = [
@@ -689,7 +698,7 @@ function topDistributorsByVolume($conn, $search = "") {
 
     $where = "";
     if ($searchEscaped !== "") {
-        $where = " AND c.CompanyName LIKE '%$searchEscaped%' OR c.CompanyID LIKE '%$searchEscaped%'";
+        $where = " AND (c.CompanyName LIKE '%$searchEscaped%' OR c.CompanyID LIKE '%$searchEscaped%')";
     }
 
     $sql = "
@@ -1041,4 +1050,75 @@ function topDistributorsByNumberOfShipments($conn) {
 if ($conn) {
     $conn->close();
 }
+
+function nontrivialDistributorPlot($conn) {
+    $sql = "
+        SELECT 
+            c.CompanyName,
+            COUNT(s.ShipmentID) AS TotalShipments
+        FROM Shipping s
+        JOIN Company c ON s.DistributorID = c.CompanyID
+        GROUP BY c.CompanyName
+        ORDER BY TotalShipments DESC
+        LIMIT 15;
+    ";
+
+    $result = $conn->query($sql);
+
+    if (!$result) {
+        return["success" => false, "error" => $conn->error];
+    }
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+
+    return ["success" => true, "data" => $rows];
+}
+
+function nontrivialCriticalityPlot($conn) {
+    $sql = "
+        SELECT 
+            l.ContinentName AS Region,
+            SUM(
+                COALESCE(downstreamCounts.downCount,0) * 
+                COALESCE(highImpactCounts.highImpact,0)
+            ) AS CriticalityScore
+        FROM Company c
+        JOIN Location l ON c.LocationID = l.LocationID
+
+        LEFT JOIN (
+            SELECT UpstreamCompanyID, COUNT(DISTINCT DownstreamCompanyID) AS downCount
+            FROM DependsOn
+            GROUP BY UpstreamCompanyID
+        ) AS downstreamCounts
+            ON downstreamCounts.UpstreamCompanyID = c.CompanyID
+
+        LEFT JOIN (
+            SELECT AffectedCompanyID, COUNT(DISTINCT EventID) AS highImpact
+            FROM ImpactsCompany
+            WHERE ImpactLevel = 'High'
+            GROUP BY AffectedCompanyID
+        ) AS highImpactCounts
+            ON highImpactCounts.AffectedCompanyID = c.CompanyID
+
+        GROUP BY l.ContinentName
+        ORDER BY CriticalityScore DESC;
+    ";
+
+    $result = $conn->query($sql);
+
+    if (!$result) {
+        return ["success" => false, "error" => $conn->error];
+    }
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = $row;
+    }
+
+    return ["success" => true, "data" => $rows];
+}
+
 ?>
