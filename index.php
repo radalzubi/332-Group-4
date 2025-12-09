@@ -1207,9 +1207,23 @@ async function mostCriticalCompanies() {
             </div>
         </div>
 
-            <div class="panel">
-                <h2>Alerts</h2>
-                <div id="alerts-container" class="alerts-container">
+           <div class="panel" style="padding: 10px; background: #1f2937; color: #ffffff; border-radius: 8px; max-width: 600px; margin: 20px auto;">
+                <h2 style="margin-bottom: 10px;">Alerts</h2>
+                <button onclick="alertsOngoingDisruptions()" class="btn" style="margin-bottom: 10px;
+                 padding: 8px 16px;
+                 background-color: #3b82f6;
+                color: #fff;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer">
+                    Refresh Alerts
+                    </button>
+                <div id="alerts-container" class="alerts-container" style="
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 6px;
+            min-height: 80px;
+    ">
                     <div class="loading">Loading alerts...</div>
                 </div>
             </div>
