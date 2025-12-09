@@ -248,29 +248,45 @@
 .financial-summary {
     font-style: italic;
     font-size: 1rem;
- }
+}
 
-#art-histogram {
+.disruptions-123 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 22px;
     width: 100%;
-    height: 500px;
+    box-sizing: border-box;
 }
-#td-histogram {
-    width: 100%;
-    height: 400px;
-}
-#charts-disruptions {
+
+.charts-123 {
+    background: rgba(31, 41, 55, 0.4);
+    padding: 12px;
+    border-radius: 12px;
+    min-height: 280px;
     display: flex;
-    gap: 20px;
     justify-content: center;
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: center;
+    overflow: hidden;
+}
+
+.disruptions-4 {
+    margin-top: 25px;
+    background: rgba(31, 41, 55, 0.4);
+    padding: 16px;
+    border-radius: 12px;
+}
+
+#charts-disruptions {
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 4px;
 }
 
 #chart-1,
-#art-histogram
+#art-histogram,
 #td-histogram {
-    width: 350px;
-    height: 260px;
+    width: 100%;
+    height: 320px;
 }
 
 
