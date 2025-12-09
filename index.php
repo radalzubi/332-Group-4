@@ -376,7 +376,7 @@ if ($page === 'scm' && $role !== 'scm') {
         <header class="card-header horizontal">
             <div>
                 <h1 class="app-title">Senior Manager Dashboard</h1>
-                <p class="app-subtitle">Overview, Health, & More</p>
+                <p class="app-subtitle">Overview, Financials, & Other Relevant Metrics</p>
             </div>
             <nav class="top-nav">
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
@@ -387,16 +387,7 @@ if ($page === 'scm' && $role !== 'scm') {
         <section class="grid">
             <!-- General info panel -->
              <div class="panel-wide">
-                <div class="company-search" style="background: transparent; padding: 0px 0;">
-                    <div class="company-search-box">
-                        <input type="text" id="company-search" placeholder="Find specific info by company or company ID">
-                        <button onclick="filterCompany()" class="btn-company-search">Search</button>
-                    </div>
-                    <div id="company-search-results"></div>
-                </div>
-
                 <div id="network-overview-display" style="margin-top: 15px;"></div>
-                
             </div>
             
             <script> // Auto load network overview panel
@@ -476,26 +467,43 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Top distributors by shipment volume panel -->
             <div class="panel">
                 <h2>Top Distributors by Shipment Volume</h2>
-
-                <div class="distributor-search" style="background: transparent; padding: 10px 0;">
-                    <div class="distributor-search-box">
+                    <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
                         <input type="text" id="distributor-search" placeholder="Filter by distributor name or ID">
-                        <button onclick="topDistributorsByVolume()" class="btn-distributor-search">Find</button>
+                        <button onclick="topDistributorsByVolume()" class="btn-company-search">Search</button>
                     </div>
-                    <div id="distributor-volume-results"></div>
                 </div>
-
+                <div id="distributor-volume-results"></div>
                 <div id="top-distributors-display" style="margin-top: 15px;"></div>
             </div>
 
             <!-- Companies affected by disruption event panel -->
             <div class="panel">
                 <h2>Companies Affected by Disruption Event</h2>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="event-company-search" placeholder="Enter disruption event name or specific ID">
+                        <button onclick="companiesAffectedByEvent()" class="btn-company-search">Search</button>
+                    </div>
+                </div>
+                <div id="event-companies-display" style="margin-top: 15px;">
+                    <div class="loading">Search by disruption event name or ID to see affected companies.</div>
+                </div>
             </div>
 
             <!-- All disruptions for specific company panel -->
             <div class="panel">
-                <h2>All Disruptions by Company</h2>
+                <h2>Find Company Disruptions</h2>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                <div class="company-search-box">
+                    <input type="text" id="company-disruption-search" placeholder="Enter company name or ID">
+                    <button onclick="allDisruptionsForCompany()" class="btn-company-search">Search</button>
+                </div>
+            </div>
+
+                <div id="company-disruptions-display" style="margin-top: 15px;">
+                    <div class="loading">Search by company name or ID to see all disruptions.</div>
+                </div>
             </div>
 
             <!-- Distributors sorted by average delay panel -->
@@ -503,62 +511,18 @@ if ($page === 'scm' && $role !== 'scm') {
                 <h2>Distributor Average Delay (Days)</h2>
             </div>
 
-            <!-- Adding a new company panel -->
-            <div class="panel">
-                <h2>Add New Company</h2>
-
-                <div style="padding: 10px 0;">
-                 <label>Company Name:</label>
-                    <input type="text" id="new-company-name" placeholder="e.g. Apex Corp" />
-
-                 <label>Company Type:</label>
-                 <select id="new-company-type">
-                      <option value="Manufacturer">Manufacturer</option>
-                      <option value="Distributor">Distributor</option>
-                      <option value="Retailer">Retailer</option>
-                    </select>
-
-                 <label>Region:</label>
-                 <input type="text" id="new-company-region" placeholder="e.g. North America" />
-
-                 <label>Tier Level:</label>
-                 <input type="number" id="new-company-tier" min="1" max="5" />
-
-                    <button onclick="addNewCompany()" style="margin-top: 10px;" class="btn-company-search">Add Company</button>
-             </div>
-
-                <div id="add-company-feedback" style="margin-top: 10px;"></div>
-            </div>
-
             <!-- Nontrivial plot 1 panel-->
-            <div class="panel-wide">
-                <h2>Top Distributors by Shipments</h2>
-
-                <div id="dist-chart-containers" style="margin-top: 20px;"></div>
-                <button onclick="loadDistributorChart()" class="btn-load">
-                    Load Distributor Chart 
-                </button>
-
-                <h3 style="margin-top: 25px;">Distributor Table</h3>
-                <div id="dist-table-container"></div>
+            <div class="panel">
+                <h2>Nontrivial Plot 1</h2>
             </div>
 
             <!-- Nontrivial plot 2 panel -->
-            <div class="panel-wide">
-                <h2>Criticality by Region</h2>
-
-                <div id="criticality-chart-container" style="margin-top: 20px;"></div>
-                <button onclick="loadCriticalityChart()" class="btn-load">
-                    Load Criticality Chart 
-                </button>
-
-                <h3 style="margin-top: 25px;">Criticality Table</h3>
-                <div id="criticality-table-container"></div>
+            <div class="panel">
+                <h2>Nontrivial Plot 2</h2>
             </div>
 
         </section>
     </div>
-
 
 <!-- Senior Manager functions (JS) -->
     <script>
@@ -740,7 +704,7 @@ const bars = data.map((item, idx) => {
             let html = '<div style="max-height: 360px; overflow-y: auto;">';
 
             if (result.data.length === 0) {
-                html += '<p style="color: #9ca3af;">No distributors found with shipment volume</p>';
+                html += '<p style="color: #9ca3af;">No distributors found by that name or ID.</p>';
             } else {
                 result.data.slice(0, 10).forEach((distributor, index) => {
                     const volume = Number(distributor.totalShipped || 0);
@@ -750,7 +714,7 @@ const bars = data.map((item, idx) => {
 
                     html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
                     html += '<div style="flex: 1;">';
-                    html += '<strong>' + (distributor.CompanyName || 'Unknown') + '</strong>';
+            html += '<strong>' + (distributor.CompanyName || 'Unknown Company') + '<div style="font-style: italic;">' + '(ID ' + (distributor.CompanyID || '') + ')' + '</div>' + '</strong>';
                     html += '</div>';
                     html += '<div style="text-align: center; padding: 0 10px;">';
                     html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + color + ';">';
@@ -774,7 +738,7 @@ const bars = data.map((item, idx) => {
         }
     }
 
-    // Company Financials By Region - NEW (NEED TO CHECK)
+    // Company financials by region
         async function companyFinancialsByRegion() {
         const display = document.getElementById('regional-financials-display');
         if (!display) return;
@@ -824,40 +788,37 @@ const bars = data.map((item, idx) => {
         }
     }
 
-    // Add New Company - NEW (NEED TO CHECK)
-    async function addNewCompany() {
-        const name = document.getElementById('new-company-name').value.trim();
-        const type = document.getElementById('new-company-type').value;
-        const region = document.getElementById('new-company-region').value.trim();
-        const tier = parseInt(document.getElementById('new-company-tier').value);
-        const feedback = document.getElementById('add-company-feedback');
+// Add new company function
+async function addNewCompany() {
+    const name   = document.getElementById('new-company-name').value.trim();
+    const type   = document.getElementById('new-company-type').value;
+    const region = document.getElementById('new-company-region').value;
+    const tier   = document.getElementById('new-company-tier').value;
 
-        if (!name || !region || isNaN(tier)) {
-            feedback.innerHTML = '<div style="color: #f87171;">Please fill in all required fields.</div>';
-            return;
-        }
+    const feedback = document.getElementById('add-company-feedback');
+    feedback.innerHTML = "Creating company...";
 
-        feedback.innerHTML = '<div class="loading">Adding company...</div>';
+    const result = await managerFetch('add_new_company', {
+        companyName: name,
+        companyType: type,
+        locationID: region,
+        tierLevel: tier
+    });
 
-        const result = await managerFetch('add_new_company', {
-            name,
-            type,
-            region,
-            tier
-        });
+    if (result.success) {
+        feedback.style.color = "#4ade80";
+        feedback.innerHTML = "Successfully created company with ID " + result.newCompanyID;
 
-        if (result.success) {
-            feedback.innerHTML = '<div style="color: #22c55e;">Company added successfully!</div>';
-            // Optionally clear the form
-            document.getElementById('new-company-name').value = '';
-            document.getElementById('new-company-region').value = '';
-            document.getElementById('new-company-tier').value = '';
-        } else {
-            feedback.innerHTML = `<div style="color: #f87171;">Error: ${result.error || 'Failed to add company.'}</div>`;
-        }
+        // Refresh overview
+        getNetworkOverview();
+
+    } else {
+        feedback.style.color = "#ef4444";
+        feedback.innerHTML = "Error: " + result.error;
     }
+}
 
-    // Regional Disruptions - COMPLETE
+// Displays regional disruptions
     async function regionalDisruptions() {
         const display = document.getElementById('regional-disruptions-display');
         if (!display) return;
@@ -915,7 +876,7 @@ const bars = data.map((item, idx) => {
         }
     }
         
-// Disruption Frequency over Time - NEW
+// Displays disruption frequency over user defined time
     async function disruptionFrequency() {
         const display = document.getElementById('disruption-trend-display');
         if (!display) return;
@@ -1087,7 +1048,7 @@ async function mostCriticalCompanies() {
 }
 
 
-    // Network Overview - COMPLETE
+// Network overview function
     async function getNetworkOverview() {
         const display = document.getElementById('network-overview-display');
         if (!display) return;
@@ -1097,39 +1058,15 @@ async function mostCriticalCompanies() {
         const result = await managerFetch('get_network_overview');
         
         if (result.success && result.data) {
-            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">';
+            let html = '<div style="display: grid; grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: max-content; gap: 15px;">';
             
-            // Total Companies
-            html += '<div style="text-align: center; padding: 15px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">';
+            // Total companies
+            html += '<div style="text-align: center; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3); width: 320px; min-height: 120px;">';
             html += '<div style="font-size: 2em; color: #60a5fa; font-weight: bold;">' + (result.data.totalCompanies || 0) + '</div>';
-            html += '<div style="color: #9ca3af; font-size: 0.85em;">Companies</div>';
-            html += '</div>';
-            
-            // Connections
-            html += '<div style="text-align: center; padding: 15px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.3);">';
-            html += '<div style="font-size: 2em; color: #22c55e; font-weight: bold;">' + (result.data.totalConnections || 0) + '</div>';
-            html += '<div style="color: #9ca3af; font-size: 0.85em;">Connections</div>';
-            html += '</div>';
-            
-            // Active Disruptions
-            html += '<div style="text-align: center; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.3);">';
-            html += '<div style="font-size: 2em; color: #ef4444; font-weight: bold;">' + (result.data.activeDisruptions || 0) + '</div>';
-            html += '<div style="color: #9ca3af; font-size: 0.85em;">Active Issues</div>';
-            html += '</div>';
-            
-            // Network Health
-            html += '<div style="text-align: center; padding: 15px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">';
-            html += '<div style="font-size: 2em; color: #f59e0b; font-weight: bold;">' + (result.data.avgNetworkHealth || 0) + '%</div>';
-            html += '<div style="color: #9ca3af; font-size: 0.85em;">Health</div>';
-            html += '</div>';
-            
-            html += '</div>';
-            
-            // Company type breakdown if available
-            if (result.data.companyTypes) {
+            html += '<div style="color: #9ca3af; font-size: 0.85em;">Total Companies</div>';
+            if (result.data.companyTypes) { // shows type
                 html += '<div style="margin-top: 20px;">';
-                html += '<h4 style="color: #e5e7eb; margin: 10px 0;">Company Distribution by Type</h4>';
-                html += '<div style="display: flex; gap: 20px; flex-wrap: wrap;">';
+                html += '<div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; width: 100%;">';
                 
                 for (let type in result.data.companyTypes) {
                     html += '<div style="text-align: center; padding: 10px; background: rgba(31, 41, 55, 0.5); border-radius: 8px;">';
@@ -1140,14 +1077,182 @@ async function mostCriticalCompanies() {
                 
                 html += '</div></div>';
             }
+            html += '</div>';
             
+            // Overall health
+            html += '<div style="text-align: center; padding: 15px; display: flex; flex-direction: column; justify-content: center; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3); width: 120px; min-height: 120px;">';
+            html += '<div style="font-size: 2em; color: #f59e0b; font-weight: bold;">' + (result.data.avgNetworkHealth || 0) + '%</div>';
+            html += '<div style="color: #9ca3af; font-size: 0.85em;">Overall Health</div>';
+            html += '</div>';
+            
+            // Add new company
+            html += '<div style="align-items: stretch; text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 15px; background: rgba(0, 255, 21, 0.19); border-radius: 8px; border: 1px solid rgba(9, 255, 0, 0.3); width: 120px; min-height: 120px;">';
+            html += '<button onclick="addNewCompanyPanel()" style="margin-top: 10px; width: 100%; height: 100%; padding: 5px 10px; font-size: 5em; border: none; border-radius: 6px; background: linear-gradient(135deg,#38bdf8,#6366f1); color: #134e22ff; cursor: pointer;" class="btn-load">+</button>';
+            html += '<div style="color: #ffffffff; font-weight: bold; font-size: 0.75em; padding: 5px;">New Company</div>';
+            html += '</div>';
+
+            // Appears once new company button is clicked
+            html += '<div id="add-company-form" style="display:none; margin-top:10px; max-width:320px; background:rgba(31,41,55,0.5); border:1px solid #4b5563; border-radius:8px; padding:12px;">';
+            html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">';
+            html += '<div style="font-size:0.95em; font-weight:bold; color:#e5e7eb;">Add Company</div>';
+            html += '</div>';
+            html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+            html += '<input type="text" id="new-company-name" placeholder="Company Name" style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;" />';
+            html += '<select id="new-company-type" '
+                + 'style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;">'
+                + '<option value="Manufacturer">Manufacturer</option>'
+                + '<option value="Distributor">Distributor</option>'
+                + '<option value="Retailer">Retailer</option></select>';
+            html += '<input type="number" id="new-company-region" min="1" max="13" placeholder="Location ID (Region 1-13)" '
+                + 'style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;" />';
+            html += '<input type="number" id="new-company-tier" min="1" max="3" placeholder="Tier (1, 2, or 3)" '
+                + 'style="padding:6px; border-radius:5px; border:1px solid #4b5563; background:#111827; color:#f9fafb; font-size:0.85rem;" />';
+            html += '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:4px;">';
+            html += '<button onclick="addNewCompany()" '
+                + 'style="flex:1; padding:6px; font-size:0.85rem; border:none; border-radius:6px; background:linear-gradient(135deg,#38bdf8,#6366f1); color:#0b1020; cursor:pointer;">'
+                + 'Create</button>';
+            html += '<button onclick="addNewCompanyPanel()" '
+                + 'style="flex:1; padding:6px; font-size:0.85rem; border:none; border-radius:6px; background:#4b5563; color:#e5e7eb; cursor:pointer;">'
+                + 'Cancel</button>';
+            html += '</div>';
+            html += '</div>';
+            html += '<div id="add-company-feedback" style="margin-top:8px; font-size:0.8rem;"></div>';
+            html += '</div>';
+
+
+
             display.innerHTML = html;
         } else {
             display.innerHTML = '<div style="color: #ef4444;">Error loading network overview: ' + (result.error || 'Unknown error') + '</div>';
         }
     }
-    </script>
 
+// Visibility toggle function
+function addNewCompanyPanel() {
+    const form = document.getElementById('add-company-form');
+    if (!form) return;
+    form.style.display = (form.style.display === "none") ? "block" : "none";
+}
+
+// Disruptions by company display 
+async function allDisruptionsForCompany() {
+    
+    const display = document.getElementById('company-disruptions-display');
+    if (!display) return;
+
+    const searchValue = document.getElementById('company-disruption-search')?.value.trim() || "";
+
+    if (!searchValue) {
+        display.innerHTML = '<p style="color: #9ca3af;">Enter a company name or ID to search.</p>';
+        return;
+    }
+
+    display.innerHTML = '<div class="loading">Retrieving disruptions affecting this company...</div>';
+    const result = await managerFetch('disruptions_by_company', {
+        companyQuery: searchValue
+    });
+
+    if (result.success && Array.isArray(result.data)) {
+        let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+            if (result.data.length === 0) {
+                html += '<p style="color: #9ca3af;">No disruptions found for this company</p>';
+
+            } else {
+                result.data.forEach((disruption) => {
+                    const impact = (disruption.ImpactLevel || '').toLowerCase();
+                    const color = impact === 'high' ? '#ef4444' :
+                                impact === 'medium' ? '#f97316' :
+                                impact === 'low' ? '#22c55e' : '#8b5cf6';
+                    html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
+                    html += '<div style="flex: 1;">';
+                    html += '<strong>' + (disruption.CompanyName || 'Unknown Company') + '</strong>';
+                    html += '<div style="font-size: 0.85em; color: #9ca3af;">' + (disruption.CategoryName || 'Unknown Category') + '</div>';
+                    html += '<div style="font-size: 0.8em; color: #9ca3af;">Event Date: ' + (disruption.EventDate || 'N/A') + '</div>';
+                    html += '<div style="font-size: 0.8em; color: #9ca3af;">Recovery Date: ' + (disruption.EventRecoveryDate || 'N/A') + '</div>';
+                    html += '</div>';
+                    html += '<div style="text-align: center; padding: 0 10px;">';
+                    html += '<div style="font-size: 1.1em; font-weight: bold; color: ' + color + '; text-transform: capitalize;">';
+                    html += (disruption.ImpactLevel || 'Unknown');
+                    html += '</div>';
+                    html += '<div style="font-size: 0.75em; color: ' + color + ';">Impact</div>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+            }
+
+        html += '</div>';
+        display.innerHTML = html;
+
+        } else {
+            display.innerHTML = '<div style="color: #ef4444;">Error loading disruptions.</div>';
+        }
+    }
+
+
+// Companies affected by disruption event display
+async function companiesAffectedByEvent() {
+    const display = document.getElementById('event-companies-display');
+    if (!display) return;
+
+    const query = document.getElementById('event-company-search')?.value.trim() || "";
+
+    if (!query) {
+        display.innerHTML = '<p style="color: #9ca3af;">Enter an event name or ID to search.</p>';
+        return;
+    }
+
+    const numericMatch = query.match(/\d+/);
+    const eventID = numericMatch ? parseInt(numericMatch[0], 10) : 0;
+
+    display.innerHTML = '<div class="loading">Loading companies affected by this event...</div>';
+
+    const result = await managerFetch('companies_by_event', {
+        categoryID: isNaN(categoryID) ? 0 : categoryID,
+        eventName: query
+    });
+
+    if (result.success && Array.isArray(result.data)) {
+        if (result.data.length === 0) {
+            display.innerHTML = '<p style="color: #9ca3af;">No companies found for this event. Try a different name or ID.</p>';
+            return;
+        }
+
+        let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+        result.data.forEach((company) => {
+            const impact = (company.ImpactLevel || '').toLowerCase();
+            const color = impact === 'high' ? '#ef4444' :
+                        impact === 'medium' ? '#f97316' :
+                        impact === 'low' ? '#22c55e' : '#8b5cf6';
+
+            html += '<div style="display:flex; align-items:center; padding:10px; margin-bottom:8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
+            html += '<div style="flex:1;">';
+            html += '<strong>' + (company.CompanyName || 'Unknown Company') + '<div style="font-style: italic;">' + '(ID ' + (company.CompanyID || '') + ')' + '</div>' + '</strong>';
+            html += '<div style="font-size: 0.85em; color: #9ca3af;">Event ID: ' + (company.CategoryID || 'N/A') + '</div>';
+            html += '<div style="font-size: 0.8em; color: #9ca3af;">Category: ' + (company.CategoryName || 'Unknown Category') + '</div>';
+            html += '</div>';
+            html += '<div style="text-align: center; padding: 0 10px;">';
+            html += '<div style="font-size: 1.1em; font-weight: bold; color: ' + color + '; text-transform: capitalize;">';
+            html += (company.ImpactLevel || 'Unknown');
+            html += '</div>';
+            html += '<div style="font-size: 0.75em; color: ' + color + ';">Impact</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+
+        html += '</div>';
+        display.innerHTML = html;
+    } else {
+        display.innerHTML = '<div style="color: #ef4444;">Error loading companies affected by this event.</div>';
+    }
+}
+
+</script>
+
+
+
+<!-- SCM CODE -->
 <?php elseif ($page === 'scm' && $role === 'scm'): ?>
 
     <!-- SUPPLY CHAIN MANAGER DASHBOARD (supply/123) -->
@@ -1207,7 +1312,7 @@ async function mostCriticalCompanies() {
             </div>
         </div>
 
-           <div class="panel" style="padding: 10px; background: #1f2937; color: #ffffff; border-radius: 8px; max-width: 600px; margin: 20px auto;">
+            <div class="panel" style="padding: 10px; background: #1f2937; color: #ffffff; border-radius: 8px; max-width: 600px; margin: 20px auto;">
                 <h2 style="margin-bottom: 10px;">Alerts</h2>
                 <button onclick="alertsOngoingDisruptions()" class="btn" style="margin-bottom: 10px;
                  padding: 8px 16px;
@@ -1223,10 +1328,7 @@ async function mostCriticalCompanies() {
             padding: 10px;
             border-radius: 6px;
             min-height: 80px;
-    ">
-                    <div class="loading">Loading alerts...</div>
-                </div>
-            </div>
+    "></div></div>
 
             <div class="panel">
                 <h2>Regional Risk Concentration<h2>
@@ -1586,16 +1688,18 @@ Plotly.newPlot('td-histogram', [trace] , layout);
 
 }
 
-   // Alerts for Supply Chain manager for refrence check index.php line 690 onwards TDBV
+// Alerts for Supply Chain manager for refrence check index.php line 690 onwards TDBV
 async function alertsOngoingDisruptions() {
     const display = document.getElementById('alerts-container');
     if (!display) return;
 
     display.innerHTML = '<div class="loading">Retrieving new and ongoing alerts...</div>';
+
 // call backend
     const result = await supplyManagerFetch('alertsOngoingDisruptions', {});
     console.log("ALERTS API RESULT:", result);
-    console.log("ALERTS RAW DATA:", result.data);
+
+     console.log("ALERTS RAW DATA:", result.data);
 // if valid datA is returned 
     if (result.success && result.data && Array.isArray(result.data.ongoingAlerts)) {
         const alerts = result.data.ongoingAlerts;
