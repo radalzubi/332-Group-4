@@ -1142,7 +1142,6 @@ async function mostCriticalCompanies() {
                 <p class="app-subtitle">Company info, KPIs, and disruption metrics.</p>
             </div>
             <nav class="top-nav">
-                <a href="index.php?page=scm" class="nav-link active">Overview</a>
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
             </nav>
         </header>
