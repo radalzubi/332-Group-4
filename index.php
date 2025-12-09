@@ -1762,4 +1762,156 @@ async function alertsOngoingDisruptions() {
         display.innerHTML = '<div style="color: #ef4444;">Error loading alerts.</div>';
     }
 }
+
+    // Company info search bar supply manager
+async function companyInfoSearch() {
+
+    const companyName = document.getElementById("company-name").value;
+    const resultsDiv  = document.getElementById("results");
+
+    resultsDiv.innerHTML = "Loading Requested Info...";
+
+    const result = await supplyManagerFetch('companyInfoSearch', {
+        companyName: companyName,
+        startDate: '2020-01-01',
+        endDate: '2025-12-31'
+    });
+
+    if (!result.success) {
+        resultsDiv.innerHTML = "Company not found.";
+        return;
+    }
+
+    const c = result.companyInfo[0];
+    let html = `<h2>${c.CompanyName}</h2>`;
+
+    
+    html += `
+        <p><strong>Type:</strong> ${c.CompanyType}</p>
+        <p><strong>Tier Level:</strong> ${c.TierLevel}</p>
+    `;
+
+    
+    if (result.address?.length) {
+        const a = result.address[0];
+        html += `
+            <h3>Address</h3>
+            <p>${a.AddressLine1 ?? ''} ${a.City}, ${a.CountryName}</p>
+        `;
+    }
+
+    html += `<h3>Dependencies</h3><ul>`;
+    result.dependencies.forEach(d => {
+        if (d.UpstreamCompanyName)
+            html += `<li>Depends on: ${d.UpstreamCompanyName}</li>`;
+        if (d.DownstreamCompanyName)
+            html += `<li>Depended on by: ${d.DownstreamCompanyName}</li>`;
+    });
+    html += `</ul>`;
+
+    
+    if (result.latestFinancial?.length) {
+        const f = result.latestFinancial[0];
+        html += `
+            <h3>Latest Financial Status</h3>
+            <p>Year: ${f.RepYear}, Quarter: ${f.Quarter}</p>
+            <p>Revenue: ${f.Revenue}</p>
+            <p>Profit: ${f.NetProfit}</p>
+        `;
+    }
+
+   
+    if (result.manufacturerCapacity?.length) {
+        html += `
+            <h3>Manufacturing Capacity</h3>
+            <p>${result.manufacturerCapacity[0].FactoryCapacity}</p>
+        `;
+    }
+
+    if (result.uniqueRoutes?.length) {
+        html += `
+            <h3>Distribution Routes</h3>
+            <p>Unique Routes: ${result.uniqueRoutes[0].UniqueRoutes}</p>
+        `;
+    }
+
+   
+    if (result.productsSupplied?.length) {
+        html += `<h3>Products Supplied</h3><ul>`;
+        result.productsSupplied.forEach(p => {
+            html += `<li>${p.ProductName} (Price: ${p.SupplyPrice})</li>`;
+        });
+        html += `</ul>`;
+        html += `<p><strong>Product Diversity:</strong> ${result.productsSupplied.length}</p>`;
+    }
+
+    
+    html += renderTransactions("Shipping", result.data?.shippingTransactions);
+    html += renderTransactions("Receiving", result.data?.receivingTransactions);
+    html += renderTransactions("Adjustments", result.data?.adjustmentTransactions);
+
+    
+    if (result.kpis) {
+        html += `
+            <h3>Key Performance Indicators</h3>
+            <ul>
+                <li>On-Time Delivery Rate: ${result.kpis.onTimeRate}%</li>
+                <li>Average Delay: ${result.kpis.avgDelay} days</li>
+                <li>Delay Std Dev: ${result.kpis.stdDelay} days</li>
+                <li>Financial Health (Past Year): ${result.kpis.financialHealth}</li>
+            </ul>
+        `;
+    }
+
+   
+    if (result.disruptions) {
+        html += `
+            <h3>Disruption Events (Past Year)</h3>
+            <p>Total Events: ${result.disruptions.total}</p>
+            <ul>
+        `;
+        result.disruptions.events.forEach(e => {
+            html += `
+                <li>${e.EventDate} – ${e.EventType}: ${e.Description}</li>
+            `;
+        });
+        html += `</ul>`;
+    }
+
+    
+    html += `
+        <button onclick="editCompany('${c.CompanyID}')">Edit Company Info</button>
+        <button onclick="saveCompany('${c.CompanyID}')">Save Changes</button>
+    `;
+
+    resultsDiv.innerHTML = html;
+}
+
+
+function renderTransactions(title, txs = []) {
+    if (!txs || txs.length === 0)
+        return `<h3>${title} Transactions</h3><p>No records</p>`;
+
+    let html = `<h3>${title} Transactions</h3><table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Product</th>
+            <th>Qty</th>
+            <th>Date</th>
+        </tr>`;
+
+    txs.forEach(t => {
+        html += `
+            <tr>
+                <td>${t.TransactionID}</td>
+                <td>${t.ProductName}</td>
+                <td>${t.Quantity}</td>
+                <td>${t.TransactionDate}</td>
+            </tr>
+        `;
+    });
+
+    return html + `</table>`;
+}
+    
 </script>
