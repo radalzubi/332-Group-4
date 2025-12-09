@@ -1,13 +1,5 @@
-// script.js – IE 332 ERP Dashboard JS
-// Make sure this file is in the SAME folder as index.php and ajax_handler.php
-
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("script.js loaded");
-    let severityRegionChart = null;
-
-    // =========================================================
-    // LOGIN FORM VALIDATION + SHAKE ANIMATION
-    // =========================================================
+/* script.js for the supply chain managers (senior managers is located in index because 
+   they were each done by different group members) */
     const loginForm   = document.getElementById("login-form");
     const usernameInp = document.getElementById("username");
     const passwordInp = document.getElementById("password");
@@ -43,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
     // GENERIC AJAX HELPER
     // =========================================================
-    async function fetchData(action, data = {}) {
+    window.supplyManagerFetch = async function (action, data = {}) {
         try {
             const formData = new FormData();
             formData.append("action", action);
@@ -51,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 formData.append(key, data[key]);
             });
 
-            const response = await fetch("ajax_handler.php", {
+            const response = await fetch("ajax_handler_supply_chain_managers.php", {
                 method: "POST",
                 body: formData
             });
@@ -66,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return { success: false, error: "Bad JSON from server", raw: text };
             }
         } catch (err) {
-            console.error("fetchData error:", err);
+            console.error("supplyManagerFetch error:", err);
             return { success: false, error: err.message || "Network error" };
         }
     }
@@ -98,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         displayDiv.innerHTML = `<p class="loading">Loading KPIs...</p>`;
 
-        const result = await fetchData("getKPIs", {
+        const result = await supplyManagerFetch("getKPIs", {
             start_date,
             end_date,
             company_name
@@ -196,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         resultsDiv.innerHTML = `<p class="loading">Searching for "${name}"...</p>`;
 
-        const result = await fetchData("searchCompany", { name });
+        const result = await supplyManagerFetch("searchCompany", { name });
 
         if (!result || !result.success || !result.data || result.data.length === 0) {
             const msg = (result && result.message) || (result && result.error) || "No companies found";
@@ -261,131 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // DISRUPTION METRICS PANEL
     // =========================================================
     window.loadDisruptionMetrics = async function () {
-        function updateSeverityRegionChart(regionalData) {
-            const canvas = document.getElementById("severityRegionChart");
-            if (!canvas) {
-                console.warn("updateSeverityRegionChart: #severityRgionChart not found");
-                return;
-            }
-
-            const ctx = canvas.getContext("2d");
-
-            if(!regionalData || regionalData.length == 0) {
-                if (severityRegionChart) {
-                    severityRegionChart.destroy();
-                    severityRegionChart = null;
-                }
-                return;
-            }
-
-            const regions = regionalData.map(r => r.Region);
-            const lowData = regionalData.map(r => Number(r.Low) || 0);
-            const medData = regionalData.map(r => Number(r.Medium) || 0);
-            const highData = regionalData.map(r => Number(r.High) || 0);
-
-            if (severityRegionChart) {
-                severityRegionChart.destroy();
-            }
-
-            severityRegionChart = new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: regions,
-                    datasets: [
-                        {
-                            label: "Low",
-                            data: lowData,
-                            stack: "severity",
-                            backgroundColor: "rgba(34, 197, 94, 0.7)"
-                        },
-                        {
-                            label: "Medium",
-                            data: medData,
-                            stack: "severity",
-                            backgroundColor: "rgba(245, 158, 11, 0.7)"
-                        },
-                        {
-                            label: "High",
-                        data: highData,
-                        stack: "severity",
-                         backgroundColor: "rgba(239, 68, 68, 0.7)"
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            position: "top"
-                        },
-                        tooltip: {
-                            callbacks: {
-                                footer: (tooltipItems) => {
-                                    let total = 0;
-                                    tooltipItems.forEach(t => total += t.parsed.y || 0);
-                                    return "Total: " + total;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            stacked: true,
-                            title: {
-                                display: true,
-                                text: "Region"
-                            }
-                        },
-                        y: {
-                            stacked: true,
-                            title: {
-                                display: true,
-                                text: "Number of Disruptions"
-                            },
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-
-        }
-
-        async function loadSeverityRegionChart() {
-            const canvas = document.getElementById("severityRegionChart");
-            if (!canvas) return;
-
-            const formData = new FormData();
-            formData.append("action", "disruptionEventsDisplay");
-
-            try {
-                const response = await fetch("actual_supply_chain_manager.php", {
-                    method: "POST",
-                    body: formData
-                });
-
-                const text = await response.text();
-                console.log("loadSeverityRegionChart raw:", text);
-
-                let json;
-                try {
-                    json = JSON.parse(text);
-                } catch (e) {
-                    console.error("loadSeverityRegionChart JSON parse error:", e);
-                    return;
-                }
-
-                if(!json.success || !json.data) {
-                    console.error("loadSeverityRegionChart sever error:", json.error);
-                    return;
-                }
-
-                const regionalData = json.data.RegionalSeverityDistribution || [];
-                updateSeverityRegionChart(regionalData);
-            } catch (err) {
-                console.error("loadSeverityRegionChart fetch error:", err);
-            }
-            
-        }
         const startInput  = document.getElementById("metric-start-date");
         const endInput    = document.getElementById("metric-end-date");
         const loadingDiv  = document.getElementById("metrics-loading");
@@ -402,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loadingDiv) loadingDiv.style.display = "block";
         displayDiv.innerHTML = "";
 
-        const result = await fetchData("getDisruptionMetrics", {
+        const result = await supplyManagerFetch("getDisruptionMetrics", {
             start_date,
             end_date
         });
@@ -454,7 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         container.innerHTML = `<div class="loading">Loading alerts...</div>`;
 
-        const result = await fetchData("getAlerts", {});
+        const result = await supplyManagerFetch("alertsOngoingDisruptions", {});
 
         if (!result || !result.success || !result.data) {
             container.innerHTML = `<p style="color:#9ca3af;">No alerts or error loading alerts.</p>`;
@@ -463,7 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         let html = "";
-        result.data.forEach(alert => {
+        result.data.ongoingAlerts.forEach(alert => {
             const severity = (alert.Severity || alert.severity || "low").toLowerCase();
             let severityClass = "alert-low";
             if (severity === "high")   severityClass = "alert-high";
@@ -486,6 +353,156 @@ document.addEventListener("DOMContentLoaded", () => {
         container.innerHTML = html;
     }
 
+// RRC Heatmap function 
+    window.rrcHeatmap = async function () {
+        const display = document.getElementById('rrc-heatmap-display');
+        if (!display) return;
+
+        display.innerHTML = '<div class="loading">Loading regional risk heatmap...</div>';
+
+        const locationID = document.getElementById('heatmap-location-id')?.value || '';
+
+        const result = await supplyManagerFetch('disruptionEventsDisplay', { locationID });
+
+        if (result.success && Array.isArray(result.data.RRC) && result.data.RRC.length > 0) {
+            const transformed = result.data.RRC
+            .map(item => ({
+            region: item.Region,
+            rrc: Number(item.RRC) / 100 || 0
+        }))
+        .sort((a, b) => b.rrc - a.rrc);
+
+    display.innerHTML = renderRRCHeatmapChart(transformed);
+    return;
+}
+
+
+        const errorNote = result.error
+            ? `<div class="trend-note error">${result.error}</div>`
+            : '<div class="trend-note error">No RRC data returned.</div>';
+
+        display.innerHTML = errorNote;
+    }
+
+    function renderRRCHeatmapChart(data) {
+        const baseWidth = 500;
+        const width = Math.max(baseWidth, data.length * 80);
+        const height = 320;
+        const padding = 50;
+        const cellWidth = (width - padding * 2) / data.length;
+        const cellHeight = 60;
+
+        const maxRRC = Math.max(...data.map(d => d.rrc));
+        function rrcToColor(rrc) {
+            const intensity = Math.round(255 - (rrc / maxRRC) * 180);
+            return `rgb(255, ${intensity}, ${intensity})`;
+        }
+
+        const cells = data.map((item, idx) => {
+            const x = padding + idx * cellWidth;
+            const y = padding;
+
+            return `
+                <rect x="${x}" y="${y}" width="${cellWidth}" height="${cellHeight}"
+                    fill="${rrcToColor(item.rrc)}" stroke="#374151" rx="4"></rect>
+
+                <text x="${x + cellWidth / 2}" y="${y + cellHeight / 2 + 4}" 
+                    text-anchor="middle" fill="white" font-size="12" font-weight="bold">
+                    ${item.region.includes(" ") 
+                        ? `<tspan x="${x + cellWidth / 2}" dy="-7">${item.region.split(" ")[0]}</tspan>
+                        <tspan x="${x + cellWidth / 2}" dy="14">${item.region.split(" ")[1]}</tspan>`
+                    : item.region}
+                </text>
+
+                <text x="${x + cellWidth / 2}" y="${y + cellHeight + 20}"
+                    text-anchor="middle" fill="#e5e7eb" font-size="11">
+                    ${(item.rrc * 100).toFixed(1)}%
+                </text>
+            `;
+        }).join('');
+
+        return `
+            <div class="rrc-summary">Regional Risk Concentration across regions</div>
+            <div style="overflow-x: auto; width: 100%;">
+                <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
+                    ${cells}
+                </svg>
+            </div>
+        `;
+    }
+
+// Severity disruptions chart
+async function loadSeverityStackedBar() {
+    const result = await supplyManagerFetch("disruptionEventsDisplay", {
+        startDate: "2020-01-01",
+        endDate: "2025-12-31"
+    });
+
+    if (!result.success || !result.data || !result.data.SeverityDistribution) {
+        console.error("Severity load error:", result);
+        return;
+    }
+
+    const severity = result.data.SeverityDistribution;
+
+    const low = severity.find(x => x.ImpactLevel === "Low")?.Count || 0;
+    const med = severity.find(x => x.ImpactLevel === "Medium")?.Count || 0;
+    const high = severity.find(x => x.ImpactLevel === "High")?.Count || 0;
+
+    const canvas = document.getElementById("severityChart");
+    if (!canvas) {
+        console.warn("severityChart canvas not found in DOM");
+        return;
+    }
+
+    const ctx = canvas.getContext("2d");
+
+    if (window.severityChartInstance) {
+        window.severityChartInstance.destroy();
+    }
+
+    window.severityChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Severity Distribution"],
+            datasets: [
+                {
+                    label: "Low",
+                    data: [low],
+                    backgroundColor: "#22c55e"
+                },
+                {
+                    label: "Medium",
+                    data: [med],
+                    backgroundColor: "#f59e0b"
+                },
+                {
+                    label: "High",
+                    data: [high],
+                    backgroundColor: "#ef4444"
+                }
+            ]
+        },
+        options: {
+            responsive: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: "Disruption Severity Distribution (Stacked)"
+                }
+            },
+            scales: {
+                x: { stacked: true,
+                    barPercentage: 0.3,
+                    categoryPercentage: 0.5
+                },
+                y: {stacked: true, 
+                    beginAtZero: true }
+            }
+        }
+    });
+}
+
     // =========================================================
     // AUTO-LOAD THINGS ON SCM PAGE
     // =========================================================
@@ -496,104 +513,3 @@ document.addEventListener("DOMContentLoaded", () => {
             window.loadKPIs();
         }, 500);
     }
-
-    // If the alerts container exists, load alerts and refresh every 30s
-    if (document.getElementById("alerts-container")) {
-        console.log("Setting up alerts auto-refresh");
-        loadAlerts();
-        setInterval(loadAlerts, 30000);
-    }
-
-    if (document.getElementById("severityRegionChart")) {
-        loadSeverityRegionChart();
-    }
-
-    async function loadSeverityRegionChart() {
-    const formData = new FormData();
-    formData.append("action", "disruptionEventsDisplay");
-
-    const response = await fetch("actual_supply_chain_manager.php", {
-        method: "POST",
-        body: formData
-    });
-
-    const json = await response.json();
-    const data = json.data?.RegionalSeverityDistribution || [];
-
-    new Chart(document.getElementById("severityRegionChart"), {
-        type: "bar",
-        data: {
-            labels: data.map(r => r.Region),
-            datasets: [
-                {
-                    label: "Low",
-                    data: data.map(r => r.Low),
-                    backgroundColor: "rgba(34,197,94,0.6)"
-                },
-                {
-                    label: "Medium",
-                    data: data.map(r => r.Medium),
-                    backgroundColor: "rgba(245,158,11,0.6)"
-                },
-                {
-                    label: "High",
-                    data: data.map(r => r.High),
-                    backgroundColor: "rgba(239,68,68,0.6)"
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: { x: { stacked: true }, y: { stacked: true } }
-        }
-    });
-}
-
-async function loadRegionalHeatMap() {
-    const container = document.getElementById("regional-heatmap");
-    if (!container) return;
-
-    container.innerHTML = '<div class="loading">Loading global heatmap...</div>';
-
-    // Use your real AJAX helper
-    const result = await fetchData("regional_disruption_overview", {
-        startDate: "2020-01-01",
-        endDate: "2025-12-31"
-    });
-
-    if (!result.success || !result.data) {
-        container.innerHTML =
-            '<p style="color:#ef4444;">Error loading regional disruption data.</p>';
-        console.error("Global heatmap error:", result);
-        return;
-    }
-
-    const regions = result.data;
-
-    const labels = regions.map(r => r.ContinentName || "Unknown");
-    const values = regions.map(r => r.TotalDisruptions || 0);
-
-    container.innerHTML = "";
-
-    const data = [
-        {
-            type: "choropleth",
-            locationmode: "country names",
-            locations: labels,
-            z: values,
-            colorscale: "Reds",
-            colorbar: { title: "Disruptions" }
-        }
-    ];
-
-    const layout = {
-        title: "Global Supply Chain Disruptions",
-        geo: {
-            projection: { type: "natural earth" }
-        },
-        margin: { t: 40 }
-    };
-
-    Plotly.newPlot("regional-heatmap", data, layout);
-}
-});
