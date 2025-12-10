@@ -102,27 +102,21 @@ if ($page === 'company_search' && $role !== 'scm') {
         <!-- Team members -->
         <section class="members-row">
             <div class="member">
-                <img src="group_headshots/rad.jpeg" alt="Rad AlZubi" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Rad AlZubi</span>
             </div>
             <div class="member">
-                <img src="group_headshots/ryder.jpeg" alt="Ryder Aldrich" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Ryder Aldrich</span>
             </div>
             <div class="member">
-                <img src="group_headshots/natalie.jpeg" alt="Natalie Anderson" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Natalie Anderson</span>
             </div>
             <div class="member">
-                <img src="group_headshots/tanto.jpeg" alt="Tanitoluwa Adeleye" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Tanitoluwa Adeleye</span>
             </div>
             <div class="member">
-                <img src="group_headshots/anushka.jpeg" alt="Anushka Heda" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Anushka Heda</span>
             </div>
             <div class="member">
-                <img src="group_headshots/jian.jpeg" alt="Jian Lim" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
                 <span>Jian Lim</span>
             </div>
         </section>
