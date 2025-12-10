@@ -182,71 +182,101 @@
 
         const name = input.value.trim();
         if (name === "") {
-            resultsDiv.innerHTML = `<p style="color:#9ca3af;">Please enter a company name to search.</p>`;
+            resultsDiv.innerHTML = `<p style="color:#9ca3af;">Please enter a company name or ID.</p>`;
             return;
         }
 
         resultsDiv.innerHTML = `<p class="loading">Searching for "${name}"...</p>`;
 
-        const result = await supplyManagerFetch("searchCompany", { name });
+        const result = await supplyManagerFetch("companyInfoSearch", { companyName: name });
 
-        if (!result || !result.success || !result.data || result.data.length === 0) {
-            const msg = (result && result.message) || (result && result.error) || "No companies found";
-            resultsDiv.innerHTML = `<p style="color:#9ca3af;">${msg}</p>`;
+        if (!result || !result.success) {
+            const msg = (result && result.error) || "Error searching for company.";
+            resultsDiv.innerHTML = `<p style="color:#f87171;">${msg}</p>`;
             return;
         }
 
-        displayCompanyResults(result.data);
+        const hasData = (result.companyInfo && result.companyInfo.length > 0)
+            || (result.address && result.address.length > 0)
+            || (result.dependencies && result.dependencies.length > 0);
+
+        if (!hasData) {
+            resultsDiv.innerHTML = `<p style="color:#9ca3af;">No results found for "${name}".</p>`;
+            return;
+        }
+
+        displayCompanyResults(result);
     };
 
-    function displayCompanyResults(companies) {
+    function displayCompanyResults(data) {
         const resultsDiv = document.getElementById("company-results");
         if (!resultsDiv) return;
 
-        let html = "";
-        companies.forEach(company => {
-            const healthScore   = company.CurrentHealthScore    || "N/A";
-            const address       = company.Address              || "N/A";
-            const type          = company.CompanyType          || "Unknown";
-            const tier          = company.TierLevel            || "N/A";
-            const outgoing      = company.OutgoingTransactions || 0;
-            const incoming      = company.IncomingTransactions || 0;
-            const upstream      = company.UpstreamCount        || 0;
-            const downstream    = company.DownstreamCount      || 0;
+        const company = (data.companyInfo && data.companyInfo[0]) || {};
+        const address = (data.address && data.address[0]) || {};
+        const latestFinancial = (data.latestFinancial && data.latestFinancial[0]) || {};
+        const dependencies = Array.isArray(data.dependencies) ? data.dependencies : [];
 
-            html += `
-                <div class="company-card">
-                    <h3>${company.CompanyName}</h3>
+        const upstream = [];
+        const downstream = [];
 
-                    <div class="company-info-row">
-                        <span class="company-info-label">Type:</span>
-                        <span class="company-info-value">${type} (Tier ${tier})</span>
-                    </div>
-
-                    <div class="company-info-row">
-                        <span class="company-info-label">Address:</span>
-                        <span class="company-info-value">${address}</span>
-                    </div>
-
-                    <div class="company-info-row">
-                        <span class="company-info-label">Health Score:</span>
-                        <span class="company-info-value">${healthScore}</span>
-                    </div>
-
-                    <div class="company-info-row">
-                        <span class="company-info-label">Transactions:</span>
-                        <span class="company-info-value">${outgoing} outgoing • ${incoming} incoming</span>
-                    </div>
-
-                    <div class="company-info-row">
-                        <span class="company-info-label">Network:</span>
-                        <span class="company-info-value">${upstream} upstream • ${downstream} downstream</span>
-                    </div>
-                </div>
-            `;
+        dependencies.forEach(dep => {
+            if (dep.UpstreamCompanyID && dep.UpstreamCompanyName) {
+                upstream.push(`${dep.UpstreamCompanyName} (ID ${dep.UpstreamCompanyID})`);
+            }
+            if (dep.DownstreamCompanyID && dep.DownstreamCompanyName) {
+                downstream.push(`${dep.DownstreamCompanyName} (ID ${dep.DownstreamCompanyID})`);
+            }
         });
 
-        resultsDiv.innerHTML = html;
+        const uniqueUpstream = [...new Set(upstream)];
+        const uniqueDownstream = [...new Set(downstream)];
+
+        const addressText = address.City || address.CountryName || address.ContinentName
+            ? [address.City, address.CountryName, address.ContinentName].filter(Boolean).join(', ')
+            : 'N/A';
+
+        const financialText = latestFinancial.RepYear
+            ? `${latestFinancial.Quarter || ''} ${latestFinancial.RepYear} • Health Score: ${latestFinancial.HealthScore ?? 'N/A'}`
+            : 'No financial reports found.';
+
+        const statCards = `
+            <div class="company-info-row">
+                <span class="company-info-label">Company ID:</span>
+                <span class="company-info-value">${company.CompanyID || 'N/A'}</span>
+            </div>
+            <div class="company-info-row">
+                <span class="company-info-label">Type & Tier:</span>
+                <span class="company-info-value">${company.Type || 'Unknown'} (Tier ${company.TierLevel || 'N/A'})</span>
+            </div>
+            <div class="company-info-row">
+                <span class="company-info-label">Address:</span>
+                <span class="company-info-value">${addressText}</span>
+            </div>
+            <div class="company-info-row">
+                <span class="company-info-label">Most Recent Financials:</span>
+                <span class="company-info-value">${financialText}</span>
+            </div>
+        `;
+
+        const dependencySection = `
+            <div class="company-info-row">
+                <span class="company-info-label">Depends on:</span>
+                <span class="company-info-value">${uniqueUpstream.length ? uniqueUpstream.join('<br>') : 'No upstream dependencies'}</span>
+            </div>
+            <div class="company-info-row">
+                <span class="company-info-label">Required by:</span>
+                <span class="company-info-value">${uniqueDownstream.length ? uniqueDownstream.join('<br>') : 'No downstream dependents'}</span>
+            </div>
+        `;
+
+        resultsDiv.innerHTML = `
+            <div class="company-card">
+                <h3>${company.CompanyName || 'Company Details'}</h3>
+                ${statCards}
+                ${dependencySection}
+            </div>
+        `;
     }
 
     // =========================================================
@@ -503,142 +533,13 @@ async function loadSeverityStackedBar() {
     });
 }
 
-// =========================================================
-// AUTO-LOAD THINGS ON SCM PAGE
-// =========================================================
-// If the KPI panel exists, auto-load KPIs shortly after page load
+    // =========================================================
+    // AUTO-LOAD THINGS ON SCM PAGE
+    // =========================================================
+    // If the KPI panel exists, auto-load KPIs shortly after page load
     if (document.getElementById("kpi-display")) {
         setTimeout(() => {
             console.log("Auto-loading KPIs...");
             window.loadKPIs();
         }, 500);
     }
-
-async function loadDistributorChart() {
-    const result = await managerFetch("nontrivial_distributor_plot");
-
-    if (!result.success) {
-        document.getElementById("dist-chart-containers").innerHTML = "Error loading chart.";
-        return;
-    }
-
-    const labels = result.data.map(r => r.CompanyName);
-    const values = result.data.map(r => Number(r.TotalShipments));
-
-    Plotly.newPlot("dist-chart-containers", [{
-        type: "bar",
-        x: labels,
-        y: values,
-        marker: { color: "steelblue" }
-    }], {
-        title: "Top Distributors by Shipment Count"
-    });
-
-    // Auto-load table
-    renderDistributorTable(result.data);
-}
-
-function renderDistributorTable(data) {
-    let html = `<table class="simple-table"><tr>
-        <th>Distributor</th><th>Total Shipments</th></tr>`;
-
-    data.forEach(r => {
-        html += `<tr><td>${r.CompanyName}</td><td>${r.TotalShipments}</td></tr>`;
-    });
-
-    html += `</table>`;
-    document.getElementById("dist-table-container").innerHTML = html;
-}
-
-
-async function loadCriticalityChart() {
-    const result = await managerFetch("nontrivial_criticality_plot");
-
-    if (!result.success) {
-        document.getElementById("criticality-chart-container").innerHTML = "Error loading chart.";
-        return;
-    }
-
-    const labels = result.data.map(r => r.Region);
-    const values = result.data.map(r => Number(r.CriticalityScore));
-
-    Plotly.newPlot("criticality-chart-container", [{
-        type: "bar",
-        x: labels,
-        y: values,
-        marker: { color: "crimson" }
-    }], {
-        title: "Criticality by Region"
-    });
-
-    // Auto-load table
-    renderCriticalityTable(result.data);
-}
-
-function renderCriticalityTable(data) {
-    let html = `<table class="simple-table"><tr>
-        <th>Region</th><th>Criticality Score</th></tr>`;
-
-    data.forEach(r => {
-        html += `<tr><td>${r.Region}</td><td>${r.CriticalityScore}</td></tr>`;
-    });
-
-    html += `</table>`;
-    document.getElementById("criticality-table-container").innerHTML = html;
-}
-
-async function companiesAffectedByDisruption() {
-    const display = document.getElementById('affected-companies-display');
-    if (!display) return;
-
-    const searchValue = document.getElementById('disruption-search')?.value.trim() || "";
-
-    display.innerHTML = '<div class="loading">Analyzing disruption impact on companies...</div>';
-
-    const result = await managerFetch('companies_by_event', {
-        eventID: searchValue
-    });
-
-    if (!result.success || !Array.isArray(result.data)) {
-        display.innerHTML = '<div style="color:#ef4444;">Error loading affected companies.</div>';
-        return;
-    }
-
-    const rows = result.data;
-
-    let html = '<div style="max-height: 360px; overflow-y: auto;">';
-
-    if (rows.length === 0) {
-        html += '<p style="color:#9ca3af;">No companies found for this disruption.</p>';
-        html += '</div>';
-        display.innerHTML = html;
-        return;
-    }
-
-    rows.forEach(c => {
-        const level = (c.ImpactLevel || "").toLowerCase();
-        const color =
-            level === "high" ? "#ef4444" :
-            level === "medium" ? "#f97316" :
-            level === "low" ? "#22c55e" :
-            "#6b7280";
-
-        html += `
-            <div style="
-                display:flex;
-                padding:10px;
-                margin-bottom:8px;
-                background:rgba(31,41,55,0.5);
-                border-radius:8px;
-                border-left:4px solid ${color};
-            ">
-                <div style="flex:1;"><strong>${c.CompanyName}</strong></div>
-                <div style="color:${color}; font-weight:bold; text-transform:capitalize;">
-                    ${c.ImpactLevel}
-                </div>
-            </div>`;
-    });
-
-    html += "</div>";
-    display.innerHTML = html;
-}
