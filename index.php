@@ -420,106 +420,6 @@ if ($page === 'company_search' && $role !== 'scm') {
             max-width: 200px;
         }
 
-        .tx-panel {
-            background: rgba(31, 41, 55, 0.7);
-            border: 1px solid rgba(148, 163, 184, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            margin-top: 14px;
-        }
-
-        .tx-filters {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .tx-filters label {
-            color: #cbd5e1;
-            font-size: 0.9rem;
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .tx-filters input {
-            width: 100%;
-            background: #0f172a;
-            border: 1px solid #334155;
-            color: #e5e7eb;
-            border-radius: 8px;
-            padding: 8px;
-        }
-
-        .tx-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-        }
-
-        .tx-summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 12px;
-            margin: 12px 0;
-        }
-
-        .tx-card {
-            background: rgba(17, 24, 39, 0.8);
-            border: 1px solid #334155;
-            border-radius: 10px;
-            padding: 12px;
-        }
-
-        .tx-card h4 {
-            margin: 0 0 6px;
-            color: #a5b4fc;
-            font-size: 1rem;
-        }
-
-        .tx-card ul {
-            margin: 0;
-            padding-left: 18px;
-            color: #e5e7eb;
-        }
-
-        .tx-card .stat-value {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #38bdf8;
-        }
-
-        .tx-card .stat-label {
-            color: #94a3b8;
-            font-size: 0.9rem;
-        }
-
-        .tx-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .tx-pill {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            color: #0b1220;
-            margin-right: 6px;
-        }
-
-        .tx-pill.success { background: #34d399; }
-        .tx-pill.warn { background: #fbbf24; }
-        .tx-pill.info { background: #60a5fa; }
-
-        .tx-section-title {
-            margin: 14px 0 6px;
-            color: #cbd5e1;
-        }
-
     </style>
 
 <script src="script.js" defer></script>
@@ -1790,7 +1690,7 @@ window.addEventListener('DOMContentLoaded', function () {
             <div class="panel-wide" style="padding: 10px; background: #1f2937; color: #ffffff; border-radius: 8px; max-width: 100%; margin: 0 0 20px;">
                 <h2 style="margin-bottom: 10px;">Alerts</h2>
                 <button onclick="alertsOngoingDisruptions()" class="btn" style="margin-bottom: 10px;
-                 padding: 8px 16px; background-color: #3b82f6; color: #fff; border: none; border-radius: 6px; cursor: pointer">Reload</button>
+                 padding: 8px 16px; background-color: #3b82f6; color: #fff; border: none; border-radius: 6px; cursor: pointer">Refresh Alerts</button>
                 <div id="alerts-container" class="alerts-container" style="
             background: rgba(255,255,255,0.05);
             padding: 10px;
@@ -1818,47 +1718,6 @@ window.addEventListener('DOMContentLoaded', function () {
                     <h3 style="margin: 0 0 5px 0; font-size: 1.1rem;">Disruption Frequency</h3>
                     <div id="disruption-frequency-display"></div>
                 </div>
-            </div>
-        </div>
-        <div class="panel-wide">
-            <h2>Transaction Explorer</h2>
-            <p style="color: #9ca3af;">Review shipments, receipts, and adjustments by time window, geography, and counterparties.</p>
-
-            <div class="tx-panel">
-                <div class="tx-filters">
-                    <div>
-                        <label for="tx-start-date">Start date</label>
-                        <input type="date" id="tx-start-date" value="2020-01-01">
-                    </div>
-                    <div>
-                        <label for="tx-end-date">End date</label>
-                        <input type="date" id="tx-end-date" value="2025-12-31">
-                    </div>
-                    <div>
-                        <label for="tx-location">Location filter</label>
-                        <input type="text" id="tx-location" placeholder="City, country, or continent">
-                    </div>
-                    <div>
-                        <label for="tx-source">Leaving company</label>
-                        <input type="text" id="tx-source" placeholder="Source company name">
-                    </div>
-                    <div>
-                        <label for="tx-destination">Arriving company</label>
-                        <input type="text" id="tx-destination" placeholder="Destination company name">
-                    </div>
-                    <div>
-                        <label for="tx-distributor">Distributor (for KPIs)</label>
-                        <input type="text" id="tx-distributor" placeholder="Distributor name">
-                    </div>
-                </div>
-                <div class="tx-actions">
-                    <button class="btn-load" onclick="loadTransactionsExplorer()">Run transaction query</button>
-                    <span style="color: #9ca3af; font-size: 0.9rem;">Distributor field unlocks shipment volume, on-time rates, and exposure.</span>
-                </div>
-            </div>
-
-            <div id="transaction-results" class="tx-panel" style="margin-top: 12px;">
-                <div class="loading">Use the filters above to load transaction activity.</div>
             </div>
         </div>
         </section>
@@ -2012,7 +1871,6 @@ document.addEventListener('DOMContentLoaded', () => {
     mostCriticalCompanies();
     regionalDisruptions();
     loadRegionalCriticality();
-    alertsOngoingDisruptions();
 });
 </script>
 
