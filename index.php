@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 
 // Database Connection
@@ -68,358 +69,23 @@ if ($page === 'company_search' && $role !== 'scm') {
 <html lang="en">
 
 
-<!--Login display-->
+<!--Front-end display-->
 <head>
-    <meta charset="UTF-8">
-    <title>ERP System</title> 
-    <link rel="stylesheet" href="style.css"> <!--style.css connection-->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Pie chart -->
-    <script src="https://cdn.plot.ly/plotly-2.34.0.min.js"></script> <!-- Histograms -->
+ <meta charset="utf-8"/>
+ <title>
+  ERP System
+ </title>
+ <link href="style.css" rel="stylesheet"/>
+ <!--connects to style.css for additional graphics-->
+ <script src="https://cdn.jsdelivr.net/npm/chart.js">
+ </script>
+ <script src="https://cdn.plot.ly/plotly-2.34.0.min.js">
+ </script>
+ <script defer="" src="script.js">
+ </script>
+</head>
 
-    <style>
-        .kpi-section {
-            margin-top: 20px;
-        }
-
-        /* User input date module */
-        .date-range-controls {
-            background: rgba(31, 41, 55, 0.5);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .date-range-controls label {
-            color: #9ca3af;
-            font-size: 0.9rem;
-        }
-        
-        .date-range-controls input[type="date"],
-        .date-range-controls input[type="text"],
-        .date-range-controls select {
-            padding: 8px 12px;
-            border-radius: 5px;
-            border: 1px solid #4b5563;
-            background: #111827;
-            color: #f9fafb;
-            font-size: 0.9rem;
-        }
-        
-        /* Buttons that load data */
-        .btn-load {
-            padding: 8px 20px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-        }
-        
-        /* glow effect */
-        .btn-load:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-
-        /* autofits each panel */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .kpi-card {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            transition: transform 0.2s;
-        }
-        
-        .kpi-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
-        }
-        
-        .kpi-card h4 {
-            margin: 0 0 10px 0;
-            color: #e5e7eb;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-        
-        .kpi-value {
-            font-size: 2.2em;
-            font-weight: bold;
-            color: #60a5fa;
-            margin: 10px 0;
-        }
-        
-        .kpi-subtitle {
-            font-size: 0.85rem;
-            color: #9ca3af;
-        }
-        
-        .loading {
-            text-align: center;
-            color: #9ca3af;
-            padding: 20px;
-        }
-        
-        .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #fca5a5;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-
-        /* Company search box */
-        .company-search {
-            background: rgba(31, 41, 55, 0.5);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .company-search-box {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .company-search-box input {
-            flex: 1;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #4b5563;
-            background: #111827;
-            color: #f9fafb;
-        }
-        
-        .btn-company-search {
-            padding: 10px 20px;
-            background: #4b5563;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        
-        .btn-company-search:hover {
-            background: #6b7280;
-        }
-        
-        .company-card {
-            background: rgba(17, 24, 39, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #374151;
-            margin-top: 10px;
-        }
-
-        .company-card .panel-subtitle {
-            color: #9ca3af;
-            font-size: 0.9rem;
-            margin-top: 0;
-        }
-
-        .company-results-grid {
-            display: grid;
-            grid-template-columns: minmax(320px, 1.15fr) minmax(320px, 1fr);
-            grid-template-areas:
-                "left transactions";
-            gap: 15px;
-            align-items: start;
-            margin-top: 10px;
-        }
-
-        .company-left-column {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            grid-area: left;
-        }
-
-        .company-card.transactions { grid-area: transactions; }
-
-        @media (max-width: 900px) {
-            .company-results-grid {
-                grid-template-columns: 1fr;
-                grid-template-areas:
-                    "left"
-                    "transactions";
-            }
-        }
-
-        .company-info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 10px 16px;
-        }
-
-        .company-dependency-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 12px 18px;
-            margin-top: 10px;
-        }
-
-        .transaction-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 12px 16px;
-            margin-top: 12px;
-        }
-
-        .company-card h3 {
-            color: #60a5fa;
-            margin: 0 0 10px 0;
-        }
-        
-        .company-info-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-            font-size: 0.9rem;
-        }
-        
-        .company-info-label {
-            color: #9ca3af;
-        }
-        
-        .company-info-value {
-            color: #e5e7eb;
-            font-weight: 500;
-        }
-
-        .update-form {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .form-row {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .inline-inputs {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 8px;
-        }
-
-        .update-form label {
-            color: #d1d5db;
-            font-size: 0.85rem;
-        }
-
-        .update-form input,
-        .update-form textarea,
-        .update-form select {
-            background: #0f172a;
-            border: 1px solid #334155;
-            color: #e5e7eb;
-            border-radius: 6px;
-            padding: 8px;
-            font-size: 0.9rem;
-        }
-
-        .update-form textarea {
-            min-height: 72px;
-            resize: vertical;
-        }
-
-        .btn-save {
-            align-self: flex-start;
-            padding: 8px 16px;
-            border-radius: 8px;
-            border: none;
-            background: linear-gradient(135deg, #22c55e, #14b8a6);
-            color: #052e16;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .btn-save:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 10px 18px rgba(34, 197, 94, 0.35);
-        }
-
-        .save-status {
-            font-size: 0.85rem;
-            color: #34d399;
-            margin: 4px 0 0;
-        }
-
-        .alerts-container {
-            display: flex;
-            gap: 12px;
-            padding: 4px 2px 8px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            align-items: stretch;
-        }
-        
-        .alerts-item {
-            flex: 0 0 auto;
-            min-width: 260px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 6px;
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        .alert-high {
-            background: rgba(239, 68, 68, 0.2);
-            border-left: 4px solid #ef4444;
-        }
-        
-        .alert-medium {
-            background: rgba(245, 158, 11, 0.2);
-            border-left: 4px solid #f59e0b;
-        }
-        
-        .alert-low {
-            background: rgba(34, 197, 94, 0.2);
-            border-left: 4px solid #22c55e;
-        }
-
-        .distributor-search-box input {
-            width: 100%;
-            max-width: 200px;
-        }
-
-    </style>
-
-<script src="script.js" defer></script> <!-- loads js for supply chain manager model -->
+<script src="script.js" defer></script>
 
 </head>
 <body class="app-body">
@@ -427,14 +93,14 @@ if ($page === 'company_search' && $role !== 'scm') {
 
 <?php if ($page === 'login'): ?>
 
-    <!-- login cards -->
+    <!-- LOGIN PAGE DISPLAY -->
     <div class="card" id="login-card">
         <header class="card-header">
             <h1 class="app-title">Group ERP Portal</h1>
             <p class="app-subtitle">Sign in to access your dashboard</p>
         </header>
 
-        <!-- group images -->
+        <!-- Team members -->
         <section class="members-row">
             <div class="member">
                 <img src="group_headshots/rad.jpeg" alt="Rad AlZubi" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
@@ -462,7 +128,7 @@ if ($page === 'company_search' && $role !== 'scm') {
             </div>
         </section>
 
-        <!-- error messages -->
+        <!-- Error messages -->
         <p id="clientError" class="error-msg hidden"></p>
         
         <?php if (isset($_GET['error'])): ?>
@@ -491,7 +157,7 @@ if ($page === 'company_search' && $role !== 'scm') {
 
 <?php elseif ($page === 'erp' && $role === 'senior'): ?>
 
-    <!-- SENIOR MANAGER DASHBOARD -->
+    <!-- SENIOR MANAGER DASHBOARD (manager/123) -->
     <div class="card wide">
         <header class="card-header horizontal">
             <div>
@@ -515,6 +181,8 @@ if ($page === 'company_search' && $role !== 'scm') {
                     if (document.getElementById('network-overview-display')) {
                      setTimeout(getNetworkOverview, 500);
                     } }); </script>
+
+
 
             <!-- Most critical companies panel -->
             <div class="panel">
@@ -603,6 +271,7 @@ if ($page === 'company_search' && $role !== 'scm') {
                     <button onclick="allDisruptionsForCompany()" class="btn-company-search">Search</button>
                 </div>
             </div>
+
                 <div id="company-disruptions-display" style="margin-top: 15px;">
                     <div class="loading">Search by company name or ID.</div>
                 </div>
@@ -650,12 +319,13 @@ if ($page === 'company_search' && $role !== 'scm') {
                     <div class="loading">Enter desired timeframe and click "View" to see data.</div>
                 </div>
             </div>
+
         </section>
     </div>
 
-<!-- Senior Manager functions (js) -->
+<!-- Senior Manager functions (JS) -->
     <script>
-    // helps debugging loading errors
+    // Manager-specific fetch function that handles errors properly
     async function managerFetch(action, data = {}) {
         try {
             const formData = new FormData();
@@ -698,7 +368,7 @@ async function avgFinancialHealth() {
         endDate
     });
 
-    // load with valid data
+    // If valid data returned
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
         const typeOrder = { Manufacturer: 0, Distributor: 1, Retailer: 2 };
         const transformed = result.data
@@ -719,7 +389,7 @@ async function avgFinancialHealth() {
         return;
     }
 
-    // failure message
+    // Otherwise use fallback demo
     const errorNote = result.error
         ? `<div class="trend-note error">${result.error}</div>`
         : '<div class="trend-note error">No financial data returned.</div>';
@@ -727,7 +397,7 @@ async function avgFinancialHealth() {
     display.innerHTML = errorNote;
 }
 
-// Avg financial health bar chart
+// AVG BAR CHART FOR FINANCIAL HEALTH
 function renderFinancialHealthChart(data) {
     const baseWidth = 500;
     const width = Math.max(baseWidth, data.length * 60);
@@ -765,6 +435,7 @@ const bars = data.map((item, idx) => {
             ${item.HealthScore}
         </text>
 
+        <!-- Vertical company name inside the bar -->
         <text
             transform="translate(${x + barWidth / 2}, ${y + barHeight / 2}) rotate(-90)"
             text-anchor="middle"
@@ -812,6 +483,7 @@ const bars = data.map((item, idx) => {
             </svg>
         </div>
     `;
+
 }
 
 // Top distributors by volume functions
@@ -826,7 +498,7 @@ const bars = data.map((item, idx) => {
     const result = await managerFetch('top_distributors_by_volume', {
         search: searchValue
     });
-        // display
+
         if (result.success && Array.isArray(result.data)) {
             let html = '<div style="max-height: 360px; overflow-y: auto;">';
 
@@ -865,14 +537,14 @@ const bars = data.map((item, idx) => {
         }
     }
 
-// nontrivial plot 1, maps distributor shipments, bar chart
+// nontrivial plot 1, maps distributor shipments via bar chart
     async function loadDistributorShipmentPlot() {
         const display = document.getElementById('nontrivial-plot-1');
         if (!display) return;
 
         display.innerHTML = '<div class="loading">Loading distributor shipment volumes...</div>';
 
-        // uses the ajax query
+        // Pull shipment totals directly from the SQL database via AJAX
         const result = await managerFetch('nontrivial_distributor_plot');
 
         if (!result.success || !Array.isArray(result.data)) {
@@ -902,7 +574,6 @@ const bars = data.map((item, idx) => {
 
         display.innerHTML = `<div class="trend-scroll"><div id="${chartId}"></div></div>`;
 
-        // actual plot display
         Plotly.newPlot(chartId, [
             {
                 type: 'bar',
@@ -937,7 +608,7 @@ const bars = data.map((item, idx) => {
         });
     }
 
-    // Company financials panel
+    // Company financials panel, overview & company search
     async function loadCompanyFinancialOverview() {
         const display = document.getElementById('company-financial-display');
         if (!display) return;
@@ -968,7 +639,6 @@ const bars = data.map((item, idx) => {
         }
     }
 
-    // specific company financial search
     async function searchCompanyFinancials() {
         const display = document.getElementById('company-financial-display');
         const input = document.getElementById('company-financial-search');
@@ -1058,6 +728,8 @@ async function addNewCompany() {
     if (result.success) {
         feedback.style.color = "#4ade80";
         feedback.innerHTML = "Successfully created company with ID " + result.newCompanyID;
+
+        // Refresh overview
         getNetworkOverview();
 
     } else {
@@ -1249,7 +921,7 @@ function renderDisruptionTrendChart(data, options = {}) {
         `;
     }
 
-// nontrivial plot #2, criticality by region, stacked bar chart
+// nontrivial plot #2, criticality by region
 async function loadRegionalCriticality() {
     const display = document.getElementById('regional-criticality-display');
     if (!display) return;
@@ -1283,7 +955,6 @@ async function loadRegionalCriticality() {
 
         const maxY = Math.max(...regions.map(r => r.score)) + 100;
 
-        // plot display
         Plotly.newPlot(chartId, [
             {
                 type: 'bar',
@@ -1340,10 +1011,10 @@ async function mostCriticalCompanies() {
 
                 // Color scheme based on score
                 const color =
-                    criticalityScore > 20 ? '#ef4444' :
-                    criticalityScore > 10 ? '#f97316' :
-                    criticalityScore > 5  ? '#eab308' :
-                                            '#22c55e';
+                    criticalityScore > 20 ? '#ef4444' :     // red (severe)
+                    criticalityScore > 10 ? '#f97316' :     // orange (high)
+                    criticalityScore > 5  ? '#eab308' :     // yellow (medium)
+                                            '#22c55e';      // green (low)
 
                 html += `
                     <div style="
@@ -1459,9 +1130,10 @@ async function mostCriticalCompanies() {
             html += '<div id="add-company-feedback" style="margin-top:8px; font-size:0.8rem;"></div>';
             html += '</div>';
 
+
+
             display.innerHTML = html;
         } else {
-            // error message
             display.innerHTML = '<div style="color: #ef4444;">Error loading network overview: ' + (result.error || 'Unknown error') + '</div>';
         }
     }
@@ -1528,6 +1200,7 @@ async function allDisruptionsForCompany() {
         }
     }
 
+
 // Companies affected by disruption event display
 async function companiesAffectedByEvent() {
     const display = document.getElementById('event-companies-display');
@@ -1550,7 +1223,6 @@ async function companiesAffectedByEvent() {
         eventName: isEventId ? '' : query
     });
 
-    // no results message
     if (result.success && Array.isArray(result.data)) {
         if (result.data.length === 0) {
             display.innerHTML = '<p style="color: #9ca3af;">No companies found for this event. Try a different name or ID.</p>';
@@ -1559,7 +1231,6 @@ async function companiesAffectedByEvent() {
 
         let html = '<div style="max-height: 360px; overflow-y: auto;">';
 
-        // result of search 
         result.data.forEach((company) => {
             const impact = (company.ImpactLevel || '').toLowerCase();
             const color = impact === 'high' ? '#ef4444' :
@@ -1622,7 +1293,6 @@ async function loadDistributorDelays() {
 
     rows.sort((a, b) => (Number(b.AvgDelayDays) || 0) - (Number(a.AvgDelayDays) || 0));
 
-    // display
     let html = '<div style="max-height: 360px; overflow-y: auto;">';
     rows.forEach((row, idx) => {
         const delay = Number(row.AvgDelayDays);
@@ -1647,7 +1317,6 @@ async function loadDistributorDelays() {
     display.innerHTML = html;
 }
 
-// autoload feature for graphs that sometimes have trouble
 window.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('distributor-delay-display')) {
         setTimeout(loadDistributorDelays, 500);
@@ -1661,6 +1330,8 @@ window.addEventListener('DOMContentLoaded', function () {
 });
 
 </script>
+
+
 
 <!-- SCM CODE -->
 <?php elseif ($page === 'scm' && $role === 'scm'): ?>
@@ -1731,7 +1402,6 @@ window.addEventListener('DOMContentLoaded', function () {
             </nav>
         </header>
 
-        <!-- style -->
         <section class="grid">
             <div class="panel-wide">
                 <h2>Company Info</h2>
@@ -1773,8 +1443,8 @@ if (isset($conn) && $conn && !$conn->connect_error) {
 }
 ?>
 <script>
+// High Impact Disruption Rate: Pie Chart use function: disruptionEventsDisplay and variable HDR
 
-// high impact disruption rates pie chart
 async function loadHighImpactDisruptions() {
     const display = document.getElementById('chart-1');
     if (!display) return;
@@ -1814,8 +1484,9 @@ async function loadHighImpactDisruptions() {
     display.appendChild(renderHighImpactDisruptionsChart(HDRChart));
 }
 
-// pie chart display
+// Pie Chart for High Impact Disruptions 
 function renderHighImpactDisruptionsChart(HDRChart) {
+// config 
 const labels = HDRChart.map(item => item.label);
 const values = HDRChart.map(item => item.value);
 const config = {
@@ -1826,8 +1497,8 @@ const config = {
       label: 'High Impact Disruptions',
       data: values,
       backgroundColor: [
-       '#FF0000' ,
-         '#0000FF'
+       '#FF0000' , // red for high impact
+         '#0000FF' // BLUE for other
       ]
     }]
   },
@@ -1873,13 +1544,14 @@ async function loadAverageRecoveryTimes() {
     if (!display) return;
 
 // Call Backend
+
 const result = await supplyManagerFetch('disruptionEventsDisplay' , {
     start_date: '2020-01-01' ,
     end_date: '2025-12-31'
 });
 
 let artValues =[];
-// result
+// If valid data returned 
 if (result.success && result.data && Array.isArray(result.data.ART)) {
     artValues = result.data.ART
         .map(item => item.ART)
@@ -1889,7 +1561,7 @@ if (result.success && result.data && Array.isArray(result.data.ART)) {
 
 }
 
-// histogram code for nontrivial plot
+// Histogram Code for ART
 async function renderAverageRecoveryTimeHistogram(artValues) {
 
 var trace = {
@@ -1954,7 +1626,7 @@ async function disruptionFrequencyByCompany() {
     display.innerHTML = '<div class="trend-note error">No disruption data returned.</div>';
 }
 
-// Disruption frequency chart display
+// Chart Renderer for Disruption Frequency
 function renderDisruptionFrequencyChart(data) {
     const baseWidth = 500;
     const width = Math.max(baseWidth, data.length * 70);
@@ -2033,24 +1705,29 @@ function renderDisruptionFrequencyChart(data) {
 async function loadTotalDowntime() { 
     const display = document.getElementById('td-histogram');
     if (!display) return;
+
+    // display.innerHTML = '<div class="loading">Loading Total Downtime ...</div>'; // can't get to disappear after chart is loaded..
+
 // Call Backend
+
 const result = await supplyManagerFetch('disruptionEventsDisplay' , {
     start_date: '2020-01-01' ,
     end_date: '2025-12-31'
 });
 
 let totaldowntimeValues =[];
-// result
+// If valid data returned 
  if (result.success && result.data && Array.isArray(result.data.TD)) {
     totaldowntimeValues = result.data.TD   
         .map(item => Number(item.TD))   // 
         .filter(val => !isNaN(val) && val !== null);
         totaldowntimeValues.sort((a, b) => a - b);
+        //console.log("TD values for histogram:", totaldowntimeValues); // to verify TD data is correct
         console.log("RAW TD:", result.data.TD); 
         console.log("TD values after cleaning:", totaldowntimeValues);
     }
 
-// total downtime histogram
+// Histogram Code for TD
 async function renderTotalDowntimeHistogram(totaldowntimeValues) {
 
 var trace = {
@@ -2079,7 +1756,7 @@ Plotly.newPlot('td-histogram', [trace] , layout);
 
 }
 
-// shows active alerts
+// Alerts for Supply Chain manager for refrence check index.php line 690 onwards TDBV
 async function alertsOngoingDisruptions() {
     const display = document.getElementById('alerts-container');
     if (!display) return;
