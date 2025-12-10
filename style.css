@@ -245,6 +245,47 @@
     grid-column: 1 / -1;
 }
 
+.trend-summary {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.trend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    color: #dbeafe;
+    font-size: 0.9rem;
+}
+
+.trend-chip .trend-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #93c5fd;
+}
+
+.trend-chip.muted {
+    background: rgba(107, 114, 128, 0.25);
+    border-color: rgba(107, 114, 128, 0.45);
+    color: #e5e7eb;
+}
+
+.trend-scroll {
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+.trend-chart {
+    min-width: 640px;
+}
+
 .financial-summary {
     font-style: italic;
     font-size: 1rem;
@@ -262,7 +303,7 @@
     background: rgba(31, 41, 55, 0.4);
     padding: 12px;
     border-radius: 12px;
-    min-height: 280px;
+    min-height: 300px;
     display: flex;
     justify-content: center;
     align-items: center;
