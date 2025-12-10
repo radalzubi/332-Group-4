@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 
 // Database Connection
@@ -69,15 +68,13 @@ if ($page === 'company_search' && $role !== 'scm') {
 <html lang="en">
 
 
-<!--Front-end display-->
-
+<!--Login display-->
 <head>
     <meta charset="UTF-8">
     <title>ERP System</title> 
-    <link rel="stylesheet" href="style.css"> <!--connects to style.css for additional graphics-->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.34.0.min.js"></script>
-
+    <link rel="stylesheet" href="style.css"> <!--style.css connection-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Pie chart -->
+    <script src="https://cdn.plot.ly/plotly-2.34.0.min.js"></script> <!-- Histograms -->
 
     <style>
         .kpi-section {
@@ -422,7 +419,7 @@ if ($page === 'company_search' && $role !== 'scm') {
 
     </style>
 
-<script src="script.js" defer></script>
+<script src="script.js" defer></script> <!-- loads js for supply chain manager model -->
 
 </head>
 <body class="app-body">
@@ -430,14 +427,14 @@ if ($page === 'company_search' && $role !== 'scm') {
 
 <?php if ($page === 'login'): ?>
 
-    <!-- LOGIN PAGE DISPLAY -->
+    <!-- login cards -->
     <div class="card" id="login-card">
         <header class="card-header">
             <h1 class="app-title">Group ERP Portal</h1>
             <p class="app-subtitle">Sign in to access your dashboard</p>
         </header>
 
-        <!-- Team members -->
+        <!-- group images -->
         <section class="members-row">
             <div class="member">
                 <img src="group_headshots/rad.jpeg" alt="Rad AlZubi" class="pfp" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22%234b5563%22/></svg>'">
@@ -465,7 +462,7 @@ if ($page === 'company_search' && $role !== 'scm') {
             </div>
         </section>
 
-        <!-- Error messages -->
+        <!-- error messages -->
         <p id="clientError" class="error-msg hidden"></p>
         
         <?php if (isset($_GET['error'])): ?>
@@ -494,7 +491,7 @@ if ($page === 'company_search' && $role !== 'scm') {
 
 <?php elseif ($page === 'erp' && $role === 'senior'): ?>
 
-    <!-- SENIOR MANAGER DASHBOARD (manager/123) -->
+    <!-- SENIOR MANAGER DASHBOARD -->
     <div class="card wide">
         <header class="card-header horizontal">
             <div>
@@ -518,8 +515,6 @@ if ($page === 'company_search' && $role !== 'scm') {
                     if (document.getElementById('network-overview-display')) {
                      setTimeout(getNetworkOverview, 500);
                     } }); </script>
-
-
 
             <!-- Most critical companies panel -->
             <div class="panel">
@@ -608,7 +603,6 @@ if ($page === 'company_search' && $role !== 'scm') {
                     <button onclick="allDisruptionsForCompany()" class="btn-company-search">Search</button>
                 </div>
             </div>
-
                 <div id="company-disruptions-display" style="margin-top: 15px;">
                     <div class="loading">Search by company name or ID.</div>
                 </div>
@@ -656,13 +650,12 @@ if ($page === 'company_search' && $role !== 'scm') {
                     <div class="loading">Enter desired timeframe and click "View" to see data.</div>
                 </div>
             </div>
-
         </section>
     </div>
 
-<!-- Senior Manager functions (JS) -->
+<!-- Senior Manager functions (js) -->
     <script>
-    // Manager-specific fetch function that handles errors properly
+    // helps debugging loading errors
     async function managerFetch(action, data = {}) {
         try {
             const formData = new FormData();
@@ -705,7 +698,7 @@ async function avgFinancialHealth() {
         endDate
     });
 
-    // If valid data returned
+    // load with valid data
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
         const typeOrder = { Manufacturer: 0, Distributor: 1, Retailer: 2 };
         const transformed = result.data
@@ -726,7 +719,7 @@ async function avgFinancialHealth() {
         return;
     }
 
-    // Otherwise use fallback demo
+    // failure message
     const errorNote = result.error
         ? `<div class="trend-note error">${result.error}</div>`
         : '<div class="trend-note error">No financial data returned.</div>';
@@ -734,7 +727,7 @@ async function avgFinancialHealth() {
     display.innerHTML = errorNote;
 }
 
-// AVG BAR CHART FOR FINANCIAL HEALTH
+// Avg financial health bar chart
 function renderFinancialHealthChart(data) {
     const baseWidth = 500;
     const width = Math.max(baseWidth, data.length * 60);
@@ -772,7 +765,6 @@ const bars = data.map((item, idx) => {
             ${item.HealthScore}
         </text>
 
-        <!-- Vertical company name inside the bar -->
         <text
             transform="translate(${x + barWidth / 2}, ${y + barHeight / 2}) rotate(-90)"
             text-anchor="middle"
@@ -820,7 +812,6 @@ const bars = data.map((item, idx) => {
             </svg>
         </div>
     `;
-
 }
 
 // Top distributors by volume functions
@@ -835,7 +826,7 @@ const bars = data.map((item, idx) => {
     const result = await managerFetch('top_distributors_by_volume', {
         search: searchValue
     });
-
+        // display
         if (result.success && Array.isArray(result.data)) {
             let html = '<div style="max-height: 360px; overflow-y: auto;">';
 
@@ -874,14 +865,14 @@ const bars = data.map((item, idx) => {
         }
     }
 
-// nontrivial plot 1, maps distributor shipments via bar chart
+// nontrivial plot 1, maps distributor shipments, bar chart
     async function loadDistributorShipmentPlot() {
         const display = document.getElementById('nontrivial-plot-1');
         if (!display) return;
 
         display.innerHTML = '<div class="loading">Loading distributor shipment volumes...</div>';
 
-        // Pull shipment totals directly from the SQL database via AJAX
+        // uses the ajax query
         const result = await managerFetch('nontrivial_distributor_plot');
 
         if (!result.success || !Array.isArray(result.data)) {
@@ -911,6 +902,7 @@ const bars = data.map((item, idx) => {
 
         display.innerHTML = `<div class="trend-scroll"><div id="${chartId}"></div></div>`;
 
+        // actual plot display
         Plotly.newPlot(chartId, [
             {
                 type: 'bar',
@@ -945,7 +937,7 @@ const bars = data.map((item, idx) => {
         });
     }
 
-    // Company financials panel, overview & company search
+    // Company financials panel
     async function loadCompanyFinancialOverview() {
         const display = document.getElementById('company-financial-display');
         if (!display) return;
@@ -976,6 +968,7 @@ const bars = data.map((item, idx) => {
         }
     }
 
+    // specific company financial search
     async function searchCompanyFinancials() {
         const display = document.getElementById('company-financial-display');
         const input = document.getElementById('company-financial-search');
@@ -1065,8 +1058,6 @@ async function addNewCompany() {
     if (result.success) {
         feedback.style.color = "#4ade80";
         feedback.innerHTML = "Successfully created company with ID " + result.newCompanyID;
-
-        // Refresh overview
         getNetworkOverview();
 
     } else {
@@ -1258,7 +1249,7 @@ function renderDisruptionTrendChart(data, options = {}) {
         `;
     }
 
-// nontrivial plot #2, criticality by region
+// nontrivial plot #2, criticality by region, stacked bar chart
 async function loadRegionalCriticality() {
     const display = document.getElementById('regional-criticality-display');
     if (!display) return;
@@ -1292,6 +1283,7 @@ async function loadRegionalCriticality() {
 
         const maxY = Math.max(...regions.map(r => r.score)) + 100;
 
+        // plot display
         Plotly.newPlot(chartId, [
             {
                 type: 'bar',
@@ -1348,10 +1340,10 @@ async function mostCriticalCompanies() {
 
                 // Color scheme based on score
                 const color =
-                    criticalityScore > 20 ? '#ef4444' :     // red (severe)
-                    criticalityScore > 10 ? '#f97316' :     // orange (high)
-                    criticalityScore > 5  ? '#eab308' :     // yellow (medium)
-                                            '#22c55e';      // green (low)
+                    criticalityScore > 20 ? '#ef4444' :
+                    criticalityScore > 10 ? '#f97316' :
+                    criticalityScore > 5  ? '#eab308' :
+                                            '#22c55e';
 
                 html += `
                     <div style="
@@ -1467,10 +1459,9 @@ async function mostCriticalCompanies() {
             html += '<div id="add-company-feedback" style="margin-top:8px; font-size:0.8rem;"></div>';
             html += '</div>';
 
-
-
             display.innerHTML = html;
         } else {
+            // error message
             display.innerHTML = '<div style="color: #ef4444;">Error loading network overview: ' + (result.error || 'Unknown error') + '</div>';
         }
     }
@@ -1537,7 +1528,6 @@ async function allDisruptionsForCompany() {
         }
     }
 
-
 // Companies affected by disruption event display
 async function companiesAffectedByEvent() {
     const display = document.getElementById('event-companies-display');
@@ -1560,6 +1550,7 @@ async function companiesAffectedByEvent() {
         eventName: isEventId ? '' : query
     });
 
+    // no results message
     if (result.success && Array.isArray(result.data)) {
         if (result.data.length === 0) {
             display.innerHTML = '<p style="color: #9ca3af;">No companies found for this event. Try a different name or ID.</p>';
@@ -1568,6 +1559,7 @@ async function companiesAffectedByEvent() {
 
         let html = '<div style="max-height: 360px; overflow-y: auto;">';
 
+        // result of search 
         result.data.forEach((company) => {
             const impact = (company.ImpactLevel || '').toLowerCase();
             const color = impact === 'high' ? '#ef4444' :
@@ -1630,6 +1622,7 @@ async function loadDistributorDelays() {
 
     rows.sort((a, b) => (Number(b.AvgDelayDays) || 0) - (Number(a.AvgDelayDays) || 0));
 
+    // display
     let html = '<div style="max-height: 360px; overflow-y: auto;">';
     rows.forEach((row, idx) => {
         const delay = Number(row.AvgDelayDays);
@@ -1654,6 +1647,7 @@ async function loadDistributorDelays() {
     display.innerHTML = html;
 }
 
+// autoload feature for graphs that sometimes have trouble
 window.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('distributor-delay-display')) {
         setTimeout(loadDistributorDelays, 500);
@@ -1667,8 +1661,6 @@ window.addEventListener('DOMContentLoaded', function () {
 });
 
 </script>
-
-
 
 <!-- SCM CODE -->
 <?php elseif ($page === 'scm' && $role === 'scm'): ?>
@@ -1739,6 +1731,7 @@ window.addEventListener('DOMContentLoaded', function () {
             </nav>
         </header>
 
+        <!-- style -->
         <section class="grid">
             <div class="panel-wide">
                 <h2>Company Info</h2>
@@ -1780,8 +1773,8 @@ if (isset($conn) && $conn && !$conn->connect_error) {
 }
 ?>
 <script>
-// High Impact Disruption Rate: Pie Chart use function: disruptionEventsDisplay and variable HDR
 
+// high impact disruption rates pie chart
 async function loadHighImpactDisruptions() {
     const display = document.getElementById('chart-1');
     if (!display) return;
@@ -1821,9 +1814,8 @@ async function loadHighImpactDisruptions() {
     display.appendChild(renderHighImpactDisruptionsChart(HDRChart));
 }
 
-// Pie Chart for High Impact Disruptions 
+// pie chart display
 function renderHighImpactDisruptionsChart(HDRChart) {
-// config 
 const labels = HDRChart.map(item => item.label);
 const values = HDRChart.map(item => item.value);
 const config = {
@@ -1834,8 +1826,8 @@ const config = {
       label: 'High Impact Disruptions',
       data: values,
       backgroundColor: [
-       '#FF0000' , // red for high impact
-         '#0000FF' // BLUE for other
+       '#FF0000' ,
+         '#0000FF'
       ]
     }]
   },
@@ -1881,14 +1873,13 @@ async function loadAverageRecoveryTimes() {
     if (!display) return;
 
 // Call Backend
-
 const result = await supplyManagerFetch('disruptionEventsDisplay' , {
     start_date: '2020-01-01' ,
     end_date: '2025-12-31'
 });
 
 let artValues =[];
-// If valid data returned 
+// result
 if (result.success && result.data && Array.isArray(result.data.ART)) {
     artValues = result.data.ART
         .map(item => item.ART)
@@ -1898,7 +1889,7 @@ if (result.success && result.data && Array.isArray(result.data.ART)) {
 
 }
 
-// Histogram Code for ART
+// histogram code for nontrivial plot
 async function renderAverageRecoveryTimeHistogram(artValues) {
 
 var trace = {
@@ -1963,7 +1954,7 @@ async function disruptionFrequencyByCompany() {
     display.innerHTML = '<div class="trend-note error">No disruption data returned.</div>';
 }
 
-// Chart Renderer for Disruption Frequency
+// Disruption frequency chart display
 function renderDisruptionFrequencyChart(data) {
     const baseWidth = 500;
     const width = Math.max(baseWidth, data.length * 70);
@@ -2042,29 +2033,24 @@ function renderDisruptionFrequencyChart(data) {
 async function loadTotalDowntime() { 
     const display = document.getElementById('td-histogram');
     if (!display) return;
-
-    // display.innerHTML = '<div class="loading">Loading Total Downtime ...</div>'; // can't get to disappear after chart is loaded..
-
 // Call Backend
-
 const result = await supplyManagerFetch('disruptionEventsDisplay' , {
     start_date: '2020-01-01' ,
     end_date: '2025-12-31'
 });
 
 let totaldowntimeValues =[];
-// If valid data returned 
+// result
  if (result.success && result.data && Array.isArray(result.data.TD)) {
     totaldowntimeValues = result.data.TD   
         .map(item => Number(item.TD))   // 
         .filter(val => !isNaN(val) && val !== null);
         totaldowntimeValues.sort((a, b) => a - b);
-        //console.log("TD values for histogram:", totaldowntimeValues); // to verify TD data is correct
         console.log("RAW TD:", result.data.TD); 
         console.log("TD values after cleaning:", totaldowntimeValues);
     }
 
-// Histogram Code for TD
+// total downtime histogram
 async function renderTotalDowntimeHistogram(totaldowntimeValues) {
 
 var trace = {
@@ -2093,7 +2079,7 @@ Plotly.newPlot('td-histogram', [trace] , layout);
 
 }
 
-// Alerts for Supply Chain manager for refrence check index.php line 690 onwards TDBV
+// shows active alerts
 async function alertsOngoingDisruptions() {
     const display = document.getElementById('alerts-container');
     if (!display) return;
