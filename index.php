@@ -96,8 +96,7 @@ if ($page === 'company_search' && $role !== 'scm') {
     <!-- LOGIN PAGE DISPLAY -->
     <div class="card" id="login-card">
         <header class="card-header">
-            <h1 class="app-title">Group ERP Portal</h1>
-            <p class="app-subtitle">Sign in to access your dashboard</p>
+            <h1 class="app-title">Group 4 ERP System</h1>
         </header>
 
         <!-- Team members -->
@@ -147,11 +146,6 @@ if ($page === 'company_search' && $role !== 'scm') {
             </div>
 
             <button type="submit" class="btn-primary">Login</button>
-
-            <p class="hint">
-                For senior manager, enter: <code>manager </code>-><code> 123</code>  || 
-                For supply chain manager, enter: <code>supply </code>-><code> 123</code> 
-            </p>
         </form>
     </div>
 
@@ -162,7 +156,6 @@ if ($page === 'company_search' && $role !== 'scm') {
         <header class="card-header horizontal">
             <div>
                 <h1 class="app-title">Senior Manager Dashboard</h1>
-                <p class="app-subtitle">Overview, Financials, & Other Relevant Metrics</p>
             </div>
             <nav class="top-nav">
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
@@ -1341,7 +1334,6 @@ window.addEventListener('DOMContentLoaded', function () {
         <header class="card-header horizontal">
             <div>
                 <h1 class="app-title">Supply Chain Manager Dashboard</h1>
-                <p class="app-subtitle">Company info, KPIs, and various metrics.</p>
             </div>
             <nav class="top-nav">
                 <a href="index.php?page=company_search" class="nav-link">Company Info Search</a>
@@ -1363,7 +1355,7 @@ window.addEventListener('DOMContentLoaded', function () {
     <!-- Disruption Metrics panel -->
         <div class="panel-wide">
             <h2>Disruption Metrics</h2>
-            <p>HDR, ART, TD, DF</p>
+            <p>HDR, ART, TD, DSD</p>
 
             <div id="charts-disruptions" style="padding: 20px;">
                 <div class="disruptions-123">
