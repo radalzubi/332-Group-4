@@ -586,3 +586,59 @@ function renderCriticalityTable(data) {
     html += `</table>`;
     document.getElementById("criticality-table-container").innerHTML = html;
 }
+
+async function companiesAffectedByDisruption() {
+    const display = document.getElementById('affected-companies-display');
+    if (!display) return;
+
+    const searchValue = document.getElementById('disruption-search')?.value.trim() || "";
+
+    display.innerHTML = '<div class="loading">Analyzing disruption impact on companies...</div>';
+
+    const result = await managerFetch('companies_by_event', {
+        eventID: searchValue
+    });
+
+    if (!result.success || !Array.isArray(result.data)) {
+        display.innerHTML = '<div style="color:#ef4444;">Error loading affected companies.</div>';
+        return;
+    }
+
+    const rows = result.data;
+
+    let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+    if (rows.length === 0) {
+        html += '<p style="color:#9ca3af;">No companies found for this disruption.</p>';
+        html += '</div>';
+        display.innerHTML = html;
+        return;
+    }
+
+    rows.forEach(c => {
+        const level = (c.ImpactLevel || "").toLowerCase();
+        const color =
+            level === "high" ? "#ef4444" :
+            level === "medium" ? "#f97316" :
+            level === "low" ? "#22c55e" :
+            "#6b7280";
+
+        html += `
+            <div style="
+                display:flex;
+                padding:10px;
+                margin-bottom:8px;
+                background:rgba(31,41,55,0.5);
+                border-radius:8px;
+                border-left:4px solid ${color};
+            ">
+                <div style="flex:1;"><strong>${c.CompanyName}</strong></div>
+                <div style="color:${color}; font-weight:bold; text-transform:capitalize;">
+                    ${c.ImpactLevel}
+                </div>
+            </div>`;
+    });
+
+    html += "</div>";
+    display.innerHTML = html;
+}
