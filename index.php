@@ -391,26 +391,7 @@ if ($page === 'scm' && $role !== 'scm') {
                      setTimeout(getNetworkOverview, 500);
                     } }); </script>
 
-            <!-- Financial health panel -->
-            <div class="panel-wide">
-                <h2>Financial Health</h2>
-                <div class="date-range-controls">
-                    <label>From:</label>
-                    <input type="date" id="finance-start-date" value="2020-01-01">
-                    <label>To:</label>
-                    <input type="date" id="finance-end-date" value="2025-12-31">
-                    <button onclick="avgFinancialHealth()" class="btn-load">View</button>
-                </div>
-                <div id="financial-health-display" style="margin-top: 15px;">
-                    <div class="loading">Enter desired timeframe and click "View" to see data.</div>
-                </div>
-            </div>
 
-            <!-- Regional disruption overview panel -->
-            <div class="panel">
-                <h2>Regional Disruptions</h2>
-                <div id="regional-disruptions-display" style="margin-top: 15px;"></div>
-            </div>
 
             <!-- Most critical companies panel -->
             <div class="panel">
@@ -422,6 +403,20 @@ if ($page === 'scm' && $role !== 'scm') {
                     </div>
                 <div id="critical-companies-display" style="margin-top: 15px;"></div>
                 </div>
+            </div>
+
+            <!-- Nontrivial plot 2 panel -->
+            <div class="panel">
+                <h2>Vulnurable Regions</h2>
+                <div id="regional-criticality-display" class="disruptions-4">
+                    <div class="loading">Loading chart...</div>
+                </div>
+            </div>
+
+            <!-- Regional disruption overview panel -->
+            <div class="panel">
+                <h2>Regional Disruptions</h2>
+                <div id="regional-disruptions-display" style="margin-top: 15px;"></div>
             </div>
 
             <!-- Disruption frequency over time panel -->
@@ -441,22 +436,6 @@ if ($page === 'scm' && $role !== 'scm') {
                 </div>
             </div>
 
-            <!-- Company financials by region panel -->
-            <div class="panel">
-                <h2>Company Financials</h2>
-                <div class="company-search" style="background: transparent; padding: 10px 0;">
-                    <div class="company-search-box">
-                        <input type="text" id="company-financial-search" placeholder="Enter company name or ID">
-                        <button onclick="searchCompanyFinancials()" class="btn-company-search">Search</button>
-                    </div>
-                    
-                </div>
-
-                <div id="company-financial-display" style="margin-top: 15px;">
-                    <div class="loading">Loading company financials by region...</div>
-                </div>
-            </div>
-
             <!-- Top distributors by shipment volume panel -->
             <div class="panel">
                 <h2>Top Distributors by Shipment Volume</h2>
@@ -470,9 +449,17 @@ if ($page === 'scm' && $role !== 'scm') {
                 <div id="top-distributors-display" style="margin-top: 15px;"></div>
             </div>
 
+            <!-- Nontrivial plot 1 panel-->
+            <div class="panel">
+                <h2>Distributors by Shipments</h2>
+                <div id="nontrivial-plot-1" class="trend-scroll">
+                    <div class="loading">Loading distributor shipment volumes...</div>
+                </div>
+            </div>
+
             <!-- Companies affected by disruption event panel -->
             <div class="panel">
-                <h2>Companies Affected by Disruption Event</h2>
+                <h2>Companies Affected by Disruption Events</h2>
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
                     <div class="company-search-box">
                         <input type="text" id="event-company-search" placeholder="Enter disruption event name or ID">
@@ -486,7 +473,7 @@ if ($page === 'scm' && $role !== 'scm') {
 
             <!-- All disruptions for specific company panel -->
             <div class="panel">
-                <h2>Find Company Disruptions</h2>
+                <h2>Disruptions By Company</h2>
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
                 <div class="company-search-box">
                     <input type="text" id="company-disruption-search" placeholder="Enter company name or ID">
@@ -501,7 +488,7 @@ if ($page === 'scm' && $role !== 'scm') {
 
             <!-- Distributors sorted by average delay panel -->
             <div class="panel">
-                <h2>Distributor Average Delay (Days)</h2>
+                <h2>Average Distributor Delay Time</h2>
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
                     <div class="company-search-box distributor-search-box">
                         <input type="text" id="distributor-delay-search" placeholder="Enter distributor name or ID">
@@ -513,19 +500,32 @@ if ($page === 'scm' && $role !== 'scm') {
                 </div>
             </div>
 
-            <!-- Nontrivial plot 1 panel-->
+            <!-- Company financials by region panel -->
             <div class="panel">
-                <h2>Distributors by Shipments</h2>
-                <div id="nontrivial-plot-1" class="trend-scroll">
-                    <div class="loading">Loading distributor shipment volumes...</div>
+                <h2>Company Financials</h2>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="company-financial-search" placeholder="Enter company name or ID">
+                        <button onclick="searchCompanyFinancials()" class="btn-company-search">Search</button>
+                    </div>
+                </div>
+                <div id="company-financial-display" style="margin-top: 15px;">
+                    <div class="loading">Loading company financials by region...</div>
                 </div>
             </div>
 
-            <!-- Nontrivial plot 2 panel -->
-            <div class="panel">
-                <h2>Vulnurable Regions</h2>
-                <div id="regional-criticality-display" class="disruptions-4">
-                    <div class="loading">Loading chart...div>
+            <!-- Financial health panel -->
+            <div class="panel-wide">
+                <h2>Financial Health</h2>
+                <div class="date-range-controls">
+                    <label>From:</label>
+                    <input type="date" id="finance-start-date" value="2020-01-01">
+                    <label>To:</label>
+                    <input type="date" id="finance-end-date" value="2025-12-31">
+                    <button onclick="avgFinancialHealth()" class="btn-load">View</button>
+                </div>
+                <div id="financial-health-display" style="margin-top: 15px;">
+                    <div class="loading">Enter desired timeframe and click "View" to see data.</div>
                 </div>
             </div>
 
