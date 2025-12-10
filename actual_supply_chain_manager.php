@@ -1,10 +1,5 @@
 <?php
-date_default_timezone_set('America/New_York');
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-//actual_supply_chain_manager.php
+//ajax_handler_supply_chain_managers.php
 session_start();
 
 // Database connection
@@ -42,8 +37,20 @@ switch ($action) {
         companyInfoSearch($conn);
         break;
 
+    case 'saveCompanyUpdate':
+        saveCompanyUpdate($conn);
+        break;
+
+    case 'saveTransactionDraft':
+        saveTransactionDraft($conn);
+        break;
+
     case 'disruptionEventsDisplay':
         disruptionEventsDisplay($conn);
+        break;
+
+    case 'regionalRiskHeatmap':
+        regionalRiskHeatmap($conn);
         break;
 
     case 'transactionsExamination':
@@ -60,9 +67,135 @@ switch ($action) {
 
 }
 
-/* ===========================================================
-   COMPANY INFO SEARCH
-   =========================================================== */
+// info update function
+function saveCompanyUpdate($conn) {
+    $companyId  = isset($_POST['companyId']) ? trim($_POST['companyId']) : '';
+    $name       = isset($_POST['name']) ? trim($_POST['name']) : '';
+    $type       = isset($_POST['type']) ? trim($_POST['type']) : '';
+    $capability = isset($_POST['capability']) ? trim($_POST['capability']) : '';
+    $notes      = isset($_POST['notes']) ? trim($_POST['notes']) : '';
+
+    if ($companyId === '') {
+        echo json_encode(['success' => false, 'error' => 'Missing company ID']);
+        return;
+    }
+
+    // creates demo table
+    $createTable = "CREATE TABLE IF NOT EXISTS CompanyUpdates (
+        UpdateID INT AUTO_INCREMENT PRIMARY KEY,
+        CompanyID VARCHAR(50) NOT NULL,
+        CompanyName VARCHAR(255) DEFAULT NULL,
+        CompanyType VARCHAR(100) DEFAULT NULL,
+        Capability TEXT DEFAULT NULL,
+        Notes TEXT DEFAULT NULL,
+        UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )";
+    if (!$conn->query($createTable)) {
+        echo json_encode(['success' => false, 'error' => 'Unable to prepare updates table']);
+        return;
+    }
+
+    // allows tracking
+    $insertSql = "INSERT INTO CompanyUpdates (CompanyID, CompanyName, CompanyType, Capability, Notes) VALUES (?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($insertSql);
+
+    if ($stmt) {
+        $stmt->bind_param("sssss", $companyId, $name, $type, $capability, $notes);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Unable to save company update']);
+        return;
+    }
+
+    // updates main company records
+    $updateSql = "UPDATE Company SET 
+        CompanyName = CASE WHEN ? <> '' THEN ? ELSE CompanyName END,
+        Type = CASE WHEN ? <> '' THEN ? ELSE Type END
+        WHERE CompanyID = ?";
+
+    $updateStmt = $conn->prepare($updateSql);
+    if ($updateStmt) {
+        $updateStmt->bind_param("sssss", $name, $name, $type, $type, $companyId);
+        $updateStmt->execute();
+        $updateStmt->close();
+    }
+
+    // Persist capability or routes
+    if ($capability !== '' && $type !== '') {
+        if (strcasecmp($type, 'Manufacturer') === 0) {
+            $capSql = "INSERT INTO Manufacturer (CompanyID, FactoryCapacity)
+                       VALUES (?, ?)
+                       ON DUPLICATE KEY UPDATE FactoryCapacity = VALUES(FactoryCapacity)";
+            $capStmt = $conn->prepare($capSql);
+            if ($capStmt) {
+                $capStmt->bind_param("ss", $companyId, $capability);
+                $capStmt->execute();
+                $capStmt->close();
+            }
+        } elseif (strcasecmp($type, 'Distributor') === 0) {
+            $routesSql = "INSERT INTO Distributor (CompanyID, UniqueRoutes)
+                          VALUES (?, ?)
+                          ON DUPLICATE KEY UPDATE UniqueRoutes = VALUES(UniqueRoutes)";
+            $routesStmt = $conn->prepare($routesSql);
+            if ($routesStmt) {
+                $routesStmt->bind_param("ss", $companyId, $capability);
+                $routesStmt->execute();
+                $routesStmt->close();
+            }
+        }
+    }
+
+    echo json_encode(['success' => true]);
+}
+
+// allows transactions to save
+function saveTransactionDraft($conn) {
+    $companyId       = isset($_POST['companyId']) ? trim($_POST['companyId']) : '';
+    $transactionDate = isset($_POST['transactionDate']) ? trim($_POST['transactionDate']) : '';
+    $quantity        = isset($_POST['quantity']) ? trim($_POST['quantity']) : '';
+    $product         = isset($_POST['product']) ? trim($_POST['product']) : '';
+    $details         = isset($_POST['details']) ? trim($_POST['details']) : '';
+
+    $transactionDate = $transactionDate !== '' ? $transactionDate : null;
+    $quantityValue   = $quantity !== '' ? $quantity : null;
+
+    if ($companyId === '') {
+        echo json_encode(['success' => false, 'error' => 'Missing company ID']);
+        return;
+    }
+
+    $createTable = "CREATE TABLE IF NOT EXISTS TransactionDrafts (
+        DraftID INT AUTO_INCREMENT PRIMARY KEY,
+        CompanyID VARCHAR(50) NOT NULL,
+        TransactionDate DATE DEFAULT NULL,
+        Quantity DECIMAL(18, 2) DEFAULT NULL,
+        Product VARCHAR(255) DEFAULT NULL,
+        Details TEXT DEFAULT NULL,
+        CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )";
+    if (!$conn->query($createTable)) {
+        echo json_encode(['success' => false, 'error' => 'Unable to prepare transaction table']);
+        return;
+    }
+
+    $insertSql = "INSERT INTO TransactionDrafts (CompanyID, TransactionDate, Quantity, Product, Details)
+                  VALUES (?, ?, ?, ?, ?)";
+    $stmt = $conn->prepare($insertSql);
+
+    if ($stmt) {
+        $stmt->bind_param("sssss", $companyId, $transactionDate, $quantityValue, $product, $details);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Unable to save transaction draft']);
+        return;
+    }
+
+    echo json_encode(['success' => true]);
+}
+
+// Company info search module
 function companyInfoSearch($conn) {
 
     $response = [
@@ -72,8 +205,26 @@ function companyInfoSearch($conn) {
 
     $identifier = isset($_POST['companyName']) ? trim($_POST['companyName']) : '';
     $companyName = $conn->real_escape_string($identifier);
-    $startDate   = isset($_POST['startDate']) ? $conn->real_escape_string($_POST['startDate']) : '1000-01-01';
-    $endDate     = isset($_POST['endDate'])   ? $conn->real_escape_string($_POST['endDate'])   : date('Y-m-d');
+    $startDateRaw = isset($_POST['startDate']) ? trim($_POST['startDate']) : '';
+    $endDateRaw   = isset($_POST['endDate'])   ? trim($_POST['endDate'])   : '';
+
+    // Allows only proper date inputs
+    $validateDate = function($date) {
+        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $date);
+    };
+
+    $startDate = $validateDate($startDateRaw) ? $startDateRaw : '1000-01-01';
+    $endDate   = $validateDate($endDateRaw)   ? $endDateRaw   : date('Y-m-d');
+
+    // anti date-swapping measures
+    if (strtotime($startDate) > strtotime($endDate)) {
+        $tmp = $startDate;
+        $startDate = $endDate;
+        $endDate = $tmp;
+    }
+
+    $startDate = $conn->real_escape_string($startDate);
+    $endDate   = $conn->real_escape_string($endDate);
 
     if ($identifier === '') {
         echo json_encode([
@@ -88,24 +239,36 @@ function companyInfoSearch($conn) {
         : "c.CompanyName='$companyName'";
 
 
-    // 1. Basic company info
+    // basic company info query
     $sql = "SELECT * FROM Company c WHERE $companyWhere";
     $result = $conn->query($sql);
     $response['companyInfo'] = $result ? fetchAll($result) : [];
 
+    // stops query early if no info
+    if (count($response['companyInfo']) === 0) {
+        echo json_encode([
+            'success' => false,
+            'error'   => 'Company not found'
+        ]);
+        return;
+    }
 
-    // 2. Location
+    // handles naming sensitivity
+    $companyIdFilter = $conn->real_escape_string($response['companyInfo'][0]['CompanyID']);
+    $companyIdWhere  = "c.CompanyID = '$companyIdFilter'";
+
+    // location query
     $sql = "
     SELECT c.CompanyID, c.CompanyName, l.City, l.CountryName, l.ContinentName
     FROM Company c
     JOIN Location l ON c.LocationID = l.LocationID
-    WHERE $companyWhere
+    WHERE $companyIdWhere
     ";
     $result = $conn->query($sql);
     $response['address'] = $result ? fetchAll($result) : [];
 
 
-    // 3. Dependencies
+    // dependencies query
     $sql = "
     SELECT 
         c.CompanyID AS BaseCompanyID,
@@ -118,18 +281,18 @@ function companyInfoSearch($conn) {
     LEFT JOIN Company depUp ON d1.UpstreamCompanyID = depUp.CompanyID
     LEFT JOIN DependsOn d2 ON c.CompanyID = d2.UpstreamCompanyID
     LEFT JOIN Company depDown ON d2.DownstreamCompanyID = depDown.CompanyID
-    WHERE $companyWhere
+    WHERE $companyIdWhere
     ";
     $result = $conn->query($sql);
     $response['dependencies'] = $result ? fetchAll($result) : [];
 
 
-    // 4. Latest Financials
+    // latest financials query
     $sql = "
     SELECT f.*
     FROM FinancialReport f
     JOIN Company c ON f.CompanyID = c.CompanyID
-    WHERE $companyWhere
+    WHERE $companyIdWhere
     ORDER BY f.RepYear DESC, FIELD(f.Quarter,'Q4','Q3','Q2','Q1') DESC
     LIMIT 1
     ";
@@ -137,46 +300,45 @@ function companyInfoSearch($conn) {
     $response['latestFinancial'] = $result ? fetchAll($result) : [];
 
 
-    // 5. Manufacturer Capacity
+    // manufacturer capacity query
     $sql = "
     SELECT c.CompanyName, m.FactoryCapacity
     FROM Company c
     JOIN Manufacturer m ON c.CompanyID = m.CompanyID
-    WHERE $companyWhere
+    WHERE $companyIdWhere
     ";
     $result = $conn->query($sql);
     $response['manufacturerCapacity'] = $result ? fetchAll($result) : [];
 
 
-    // 6. Distributor unique routes
+    // unique routes query
     $sql = "
     SELECT c.CompanyName,
-           COUNT(DISTINCT CONCAT(s.SourceCompanyID, '->', s.DestinationCompanyID)) AS UniqueRoutes
+        COALESCE(NULLIF(MAX(d.UniqueRoutes), ''),
+        COUNT(DISTINCT CONCAT(s.SourceCompanyID, '->', s.DestinationCompanyID))) AS UniqueRoutes
     FROM Company c
-    JOIN Distributor d ON c.CompanyID = d.CompanyID
-    JOIN Shipping s ON d.CompanyID = s.DistributorID
-    WHERE $companyWhere
+        JOIN Distributor d ON c.CompanyID = d.CompanyID
+        LEFT JOIN Shipping s ON d.CompanyID = s.DistributorID
+    WHERE $companyIdWhere
     GROUP BY c.CompanyName
     ";
     $result = $conn->query($sql);
     $response['uniqueRoutes'] = $result ? fetchAll($result) : [];
 
 
-    // 7. Products supplied
+    // products supplied query
     $sql = "
     SELECT p.ProductID, p.ProductName, sp.SupplyPrice
     FROM SuppliesProduct sp
     JOIN Product p ON sp.ProductID = p.ProductID
     JOIN Company c ON sp.SupplierID = c.CompanyID
-    WHERE $companyWhere
+    WHERE $companyIdWhere
     ";
     $result = $conn->query($sql);
     $response['productsSupplied'] = $result ? fetchAll($result) : [];
 
 
-  // -------------------------
-// Shipping Transactions
-// -------------------------
+// shiping transactions query
 $sql = "SELECT 
             t.TransactionID,
             'Shipping' AS TransactionType,
@@ -190,7 +352,7 @@ $sql = "SELECT
         JOIN Product p ON s.ProductID = p.ProductID
         JOIN Company c 
             ON (s.SourceCompanyID = c.CompanyID OR s.DestinationCompanyID = c.CompanyID)
-        WHERE $companyWhere
+        WHERE $companyIdWhere
           AND s.ActualDate BETWEEN '$startDate' AND '$endDate'
         ORDER BY s.ActualDate DESC";
 
@@ -198,9 +360,7 @@ $result = $conn->query($sql);
 $response['data']['shippingTransactions'] = $result ? fetchAll($result) : [];
 
 
-// -------------------------
-// Receiving Transactions
-// -------------------------
+// receiving transactions query
 $sql = "SELECT 
             t.TransactionID,
             'Receiving' AS TransactionType,
@@ -214,7 +374,7 @@ $sql = "SELECT
         JOIN Shipping s ON r.ShipmentID = s.ShipmentID
         JOIN Product p ON s.ProductID = p.ProductID
         JOIN Company c ON r.ReceiverCompanyID = c.CompanyID
-        WHERE $companyWhere
+        WHERE $companyIdWhere
           AND r.ReceivedDate BETWEEN '$startDate' AND '$endDate'
         ORDER BY r.ReceivedDate DESC";
 
@@ -222,9 +382,7 @@ $result = $conn->query($sql);
 $response['data']['receivingTransactions'] = $result ? fetchAll($result) : [];
 
 
-// -------------------------
-// Adjustment Transactions
-// -------------------------
+// Adjustment transactions query
 $sql = "SELECT 
             t.TransactionID,
             'Adjustment' AS TransactionType,
@@ -237,7 +395,7 @@ $sql = "SELECT
         JOIN InventoryAdjustment a ON t.TransactionID = a.TransactionID
         JOIN Product p ON a.ProductID = p.ProductID
         JOIN Company c ON a.CompanyID = c.CompanyID
-        WHERE c.CompanyName = '$companyName'
+        WHERE $companyIdWhere
           AND a.AdjustmentDate BETWEEN '$startDate' AND '$endDate'
         ORDER BY a.AdjustmentDate DESC";
 
@@ -245,44 +403,50 @@ $result = $conn->query($sql);
 $response['data']['adjustmentTransactions'] = $result ? fetchAll($result) : [];
 
 
-// --------------------------------------------------------
-// Distributor KPIs (Only applies if company is distributor)
-// --------------------------------------------------------
-$sql = "WITH distributorShipments AS (
-            SELECT 
+// Distributor KPIs
+    $sql = "WITH distributorShipments AS (
+            SELECT
                 s.ShipmentID,
-                s.PromisedDate,
-                s.ActualDate,
-                DATEDIFF(s.ActualDate, s.PromisedDate) AS daysDelayed
+                COALESCE(s.PromisedDate, s.ActualDate, r.ReceivedDate, CURDATE()) AS PromisedDate,
+                COALESCE(r.ReceivedDate, s.ActualDate, CURDATE()) AS DeliveryDate,
+                DATEDIFF(
+                    COALESCE(r.ReceivedDate, s.ActualDate, CURDATE()),
+                    COALESCE(s.PromisedDate, s.ActualDate, r.ReceivedDate, CURDATE())
+                ) AS daysDelayed
             FROM Shipping s
-            JOIN Company c ON s.DistributorID = c.CompanyID
-            WHERE c.CompanyName = '$companyName'
+                LEFT JOIN Receiving r ON r.ShipmentID = s.ShipmentID
+                JOIN Company c ON s.DistributorID = c.CompanyID
+            WHERE $companyIdWhere
               AND c.Type = 'Distributor'
-              AND s.ActualDate BETWEEN '$startDate' AND '$endDate'
+              AND COALESCE(r.ReceivedDate, s.ActualDate, s.PromisedDate, CURDATE()) BETWEEN '$startDate' AND '$endDate'
         )
-        SELECT 
+        SELECT
             c.CompanyName,
             c.Type AS CompanyType,
-            CASE WHEN c.Type = 'Distributor' THEN 
-                (SELECT ROUND(100.0 * SUM(CASE WHEN ActualDate <= PromisedDate THEN 1 ELSE 0 END) / NULLIF(COUNT(*),0), 4)
-                 FROM distributorShipments)
+            CASE WHEN c.Type = 'Distributor' THEN
+                (
+                    SELECT CASE WHEN COUNT(*) = 0 THEN 0 ELSE ROUND(
+                        100.0 * COALESCE(SUM(CASE WHEN DeliveryDate <= PromisedDate THEN 1 ELSE 0 END), 0)
+                        / COUNT(*),
+                        4
+                    ) END
+                    FROM distributorShipments
+                )
             ELSE NULL END AS OnTimeDeliveryRate,
-            CASE WHEN c.Type = 'Distributor' THEN 
-                (SELECT ROUND(AVG(daysDelayed),4) FROM distributorShipments)
+            CASE WHEN c.Type = 'Distributor' THEN
+                (SELECT ROUND(COALESCE(AVG(daysDelayed), 0), 4) FROM distributorShipments)
             ELSE NULL END AS AverageDelay,
-            CASE WHEN c.Type = 'Distributor' THEN 
-                (SELECT ROUND(STDDEV_POP(daysDelayed),4) FROM distributorShipments)
+            CASE WHEN c.Type = 'Distributor' THEN
+                (SELECT ROUND(COALESCE(STDDEV_POP(daysDelayed), 0), 4) FROM distributorShipments)
             ELSE NULL END AS StandardDeviationDelay
         FROM Company c
-        WHERE c.CompanyName = '$companyName'";
+        WHERE $companyIdWhere";
 
 $result = $conn->query($sql);
 $response['data']['distributorKPIs'] = $result ? fetchAll($result) : [];
 
 
-// ----------------------------------------
-// Financial Health – Last 4 Quarters
-// ----------------------------------------
+// Financial health for the last 4 quarters
 $sql = "WITH LastFourQuarters AS (
             SELECT 
                 CONCAT('Q', MOD(QUARTER(CURDATE())-n-1+4,4)+1) AS Quarter,
@@ -306,16 +470,14 @@ $sql = "WITH LastFourQuarters AS (
            AND fr.Quarter = lfq.Quarter
         JOIN Company c 
             ON fr.CompanyID = c.CompanyID
-        WHERE c.CompanyName = '$companyName'
+        WHERE $companyIdWhere
         ORDER BY fr.RepYear DESC, fr.Quarter DESC";
 
 $result = $conn->query($sql);
 $response['data']['financialHealthPastYear'] = $result ? fetchAll($result) : [];
 
 
-// ----------------------------------------
-// Disruption Count – Past Year (All)
-// ----------------------------------------
+// Disruption count in the past year
 $sql = "SELECT 
             dc.CategoryName, 
             COUNT(de.EventID) AS EventCount
@@ -330,9 +492,7 @@ $result = $conn->query($sql);
 $response['data']['disruptionCountsPastYear'] = $result ? fetchAll($result) : [];
 
 
-// ----------------------------------------
-// Disruption Events List – Past Year
-// ----------------------------------------
+// disruption events in the past year
 $sql = "SELECT 
             dc.CategoryID,
             dc.CategoryName,
@@ -354,9 +514,7 @@ echo json_encode($response);
 
 
 
-/* ===========================================================
-   DISRUPTION EVENTS
-   =========================================================== */
+// All disruption events function
 function disruptionEventsDisplay($conn) {
     $response = array(
         'success' => true,
@@ -423,9 +581,7 @@ function disruptionEventsDisplay($conn) {
 
     $response['data']['disruptionsInRange'] = $disruptions;
 
-    // ----------------------------------------
-    // Company-level metrics
-    // ----------------------------------------
+    // Various company metrics
     $companyMetrics = [];
     $totalDisruptions = count($disruptions);
 
@@ -515,9 +671,7 @@ function disruptionEventsDisplay($conn) {
     $response['data']['HDR'] = $hdrList;
     $response['data']['TD']  = $tdList;
 
-    // ----------------------------------------
-    // Regional Risk Concentration
-    // ----------------------------------------
+    // regional risk concentration
     $regionCounts = [];
 
     foreach ($disruptions as $d) {
@@ -528,22 +682,31 @@ function disruptionEventsDisplay($conn) {
         $regionCounts[$r]++;
     }
 
-    $rrcList = [];
+$rrcList = [];
 
     if ($totalDisruptions > 0) {
         foreach ($regionCounts as $r => $count) {
-            $rrcList[] = array(
+            $rrcList[] = [
                 'Region' => $r,
-                'RRC'    => round(100 * $count / $totalDisruptions, 2)
-            );
+                'RRC'    => round($count / $totalDisruptions, 4),
+                'Count'  => $count,
+                'Total'  => $totalDisruptions
+            ];
         }
-    }
+    } else {
+    
+    $rrcList[] = [
+        'Region' => 'No Data',
+        'RRC'    => 0,
+        'Count'  => 0,
+        'Total'  => 0
+    ];
+}
 
-    $response['data']['RRC'] = $rrcList;
+$response['data']['RRC'] = $rrcList;
 
-    // ----------------------------------------
-    // Severity Distribution
-    // ----------------------------------------
+
+// severity disruptions
     $severityCounts = array(
         'Low'    => 0,
         'Medium' => 0,
@@ -570,15 +733,80 @@ function disruptionEventsDisplay($conn) {
     echo json_encode($response);
 }
 
+// Heatmap function
+function regionalRiskHeatmap($conn) {
+    $startDate = isset($_POST['startDate']) && $_POST['startDate'] !== ''
+                 ? $conn->real_escape_string($_POST['startDate'])
+                 : '1000-01-01';
+
+    $endDate = isset($_POST['endDate']) && $_POST['endDate'] !== ''
+               ? $conn->real_escape_string($_POST['endDate'])
+               : date('Y-m-d');
+
+    $sql = "
+        SELECT
+            region_counts.Region,
+            region_counts.RegionDisruptions,
+            totals.TotalDisruptions,
+            CASE WHEN totals.TotalDisruptions > 0
+                 THEN ROUND(100 * region_counts.RegionDisruptions / totals.TotalDisruptions, 2)
+                 ELSE 0
+            END AS DisruptionPercent
+        FROM (
+            SELECT
+                COALESCE(l.ContinentName, 'Unknown') AS Region,
+                COUNT(*) AS RegionDisruptions
+            FROM DisruptionEvent de
+            JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+            JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+            LEFT JOIN Location l ON c.LocationID = l.LocationID
+            WHERE de.EventDate BETWEEN ? AND ?
+            GROUP BY Region
+        ) AS region_counts
+        CROSS JOIN (
+            SELECT COUNT(*) AS TotalDisruptions
+            FROM DisruptionEvent de
+            JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+            WHERE de.EventDate BETWEEN ? AND ?
+        ) AS totals
+        ORDER BY DisruptionPercent DESC";
+
+    $stmt = $conn->prepare($sql);
+
+    if (!$stmt) {
+        echo json_encode([
+            'success' => false,
+            'error'   => 'Failed to prepare regional risk query'
+        ]);
+        return;
+    }
+
+    $stmt->bind_param('ssss', $startDate, $endDate, $startDate, $endDate);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $regions = fetchAll($result);
+
+    $totalDisruptions = 0;
+    if (count($regions) > 0) {
+        $totalDisruptions = isset($regions[0]['TotalDisruptions'])
+            ? (int)$regions[0]['TotalDisruptions']
+            : 0;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'regions' => $regions,
+            'totalDisruptions' => $totalDisruptions,
+            'startDate' => $startDate,
+            'endDate' => $endDate
+        ]
+    ]);
+}
 
 
-
-
-
-
-/* ===========================================================
-   ONGOING ALERTS
-   =========================================================== */
+// Ongoing alerts function
 function alertsOngoingDisruptions($conn) {
 
     $response = [
@@ -606,9 +834,7 @@ function alertsOngoingDisruptions($conn) {
 
 
 
-/* ===========================================================
-   Transactions Examination
-   =========================================================== */
+// Examines transactions and allows edits
 function transactionsExamination($conn) {
     $response = array('success' => true, 'data' => array());
 
@@ -623,7 +849,7 @@ function transactionsExamination($conn) {
     $startEsc = $conn->real_escape_string($startDate);
     $endEsc   = $conn->real_escape_string($endDate);
 
-    /* -------------------------------- SHIPPING -------------------------------- */
+// shipping adjustments
     $sqlShipping = "
         SELECT 
             s.ShipmentID,
@@ -673,10 +899,10 @@ function transactionsExamination($conn) {
             AND (
                 ls.CountryName = '$locEsc'
                 OR ls.ContinentName = '$locEsc'
-                OR ls.CityName = '$locEsc'
+                OR ls.City = '$locEsc'
                 OR ld.CountryName = '$locEsc'
                 OR ld.ContinentName = '$locEsc'
-                OR ld.CityName = '$locEsc'
+                OR ld.City = '$locEsc'
             )
         ";
     }
@@ -687,7 +913,7 @@ function transactionsExamination($conn) {
     $response['data']['shipping'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : array();
 
 
-    /* -------------------------------- RECEIVING -------------------------------- */
+// receiving adjustments
     $sqlReceiving = "
         SELECT 
             r.ReceivingID,
@@ -727,7 +953,7 @@ function transactionsExamination($conn) {
     $response['data']['receiving'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : array();
 
 
-    /* -------------------------------- ADJUSTMENTS -------------------------------- */
+// inventory adjustments
     $sqlAdjustment = "
         SELECT 
             a.AdjustmentID,
@@ -763,7 +989,7 @@ function transactionsExamination($conn) {
     $result = $conn->query($sqlAdjustment);
     $response['data']['adjustment'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : array();
 
-/* ---------------- DISTRIBUTOR-SPECIFIC ANALYSIS ---------------- */
+// distributor only analysis
     if ($distributor) {
         $distEsc = $conn->real_escape_string($distributor);
 
@@ -782,7 +1008,7 @@ function transactionsExamination($conn) {
         $result = $conn->query($sqlShippingVolume);
         $response['data']['shippingVolume'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : array();
 
-        // On-time delivery rate
+        // OTDR
         $sqlOnTimeRate = "
             SELECT d.CompanyName AS DistributorName,
                    ROUND(
@@ -800,9 +1026,7 @@ function transactionsExamination($conn) {
         $response['data']['onTimeDeliveryRate'] = $result ? $result->fetch_all(MYSQLI_ASSOC) : array();
 
 
-        //-------------------------------------------------------------
-        // 1. Products handled
-        //-------------------------------------------------------------
+// products handled query
         $sqlProducts = "
         SELECT 
                p.ProductID,
@@ -829,9 +1053,7 @@ function transactionsExamination($conn) {
         $distributorID = !empty($productsHandled) ? $productsHandled[0]['DistributorID'] : null;
 
 
-        //-------------------------------------------------------------
-        // 2. Status of shipments (On Time / Late / Out)
-        //-------------------------------------------------------------
+// shipment status query
         $sqlKPIs = "
         SELECT d.CompanyName AS DistributorName,
                COUNT(DISTINCT s.ShipmentID) AS shipmentCount,
@@ -849,9 +1071,7 @@ function transactionsExamination($conn) {
         $response['distributorKPIs'] = $resultKPIs ? $resultKPIs->fetch_all(MYSQLI_ASSOC) : [];
 
 
-        //-------------------------------------------------------------
-        // 3. Disruption exposure for distributor
-        //-------------------------------------------------------------
+// disruption exposure query
         $sqlExposure = "
         SELECT d.CompanyName,
                COUNT(DISTINCT de.EventID) AS Ndisruptions,
@@ -868,9 +1088,7 @@ function transactionsExamination($conn) {
         $response['disruptionExposure'] = $resultExposure ? $resultExposure->fetch_all(MYSQLI_ASSOC) : [];
 
 
-        //-------------------------------------------------------------
-        // 4. Shipments per category (first plot)
-        //-------------------------------------------------------------
+// shipments per category, 1st plot
         $sqlShipmentsByCategory = "
         SELECT p.Category,
                SUM(s.Quantity) AS TotalQuantity,
@@ -888,9 +1106,7 @@ function transactionsExamination($conn) {
         $response['shipmentsByCategory'] = $resultShipmentsByCategory ? $resultShipmentsByCategory->fetch_all(MYSQLI_ASSOC) : [];
 
 
-        //-------------------------------------------------------------
-        // 5. Revenue per category (second plot)
-        //-------------------------------------------------------------
+// revenue per category, 2nd plot
         $sqlRevenueByCategory = "
         SELECT p.Category,
                SUM(COALESCE(sp.SupplyPrice,0) * s.Quantity) AS TotalRevenue
@@ -908,9 +1124,7 @@ function transactionsExamination($conn) {
         $response['revenueByCategory'] = $resultRevenueByCategory ? $resultRevenueByCategory->fetch_all(MYSQLI_ASSOC) : [];
 
 
-        //-------------------------------------------------------------
-        // 6. Price distribution (third plot)
-        //-------------------------------------------------------------
+// price disruptions, 3rd plot
         $sqlPriceDistribution = "
         SELECT p.ProductName,
                p.Category,
@@ -930,9 +1144,7 @@ function transactionsExamination($conn) {
         $response['priceDistribution'] = $resultPriceDistribution ? $resultPriceDistribution->fetch_all(MYSQLI_ASSOC) : [];
 
 
-        //-------------------------------------------------------------
-        // 7. Disruption events by category (fourth plot)
-        //-------------------------------------------------------------
+// disruption events by category, 4th plot
         $sqlDisruptionsByCategory = "
         SELECT dc.CategoryName AS EventCategory,
                COUNT(DISTINCT de.EventID) AS NumEvents,
