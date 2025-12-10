@@ -480,14 +480,14 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Companies affected by disruption event panel -->
             <div class="panel">
                 <h2>Companies Affected by Disruption Event</h2>
+               
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
-                    <div class="company-search-box">
-                        <input type="text" id="event-company-search" placeholder="Enter disruption event name or specific ID">
-                        <button onclick="companiesAffectedByEvent()" class="btn-company-search">Search</button>
-                    </div>
+                    <input type="text" id="disruption-search" placeholder="Enter Disruption Event ID">
+                    <button onclick="companiesAffectedByDisruption()" class="btn-load">View</button>
                 </div>
-                <div id="event-companies-display" style="margin-top: 15px;">
-                    <div class="loading">Search by disruption event name or ID to see affected companies.</div>
+
+                <div id="affected-companies-display" style="margin-top: 15px;">
+                    <div class="loading">Enter event ID and click 'View'</div>
                 </div>
             </div>
 
@@ -512,13 +512,29 @@ if ($page === 'scm' && $role !== 'scm') {
             </div>
 
             <!-- Nontrivial plot 1 panel-->
-            <div class="panel">
-                <h2>Nontrivial Plot 1</h2>
+            <div class="panel-wide">
+                <h2>Top Distributors by Shipments</h2>
+
+                <div id="dist-chart-containers" style="margin-top:20px;"></div>
+                <button onclick="loadDistributorChart()" class="btn-load">
+                    Load Distributor Chart 
+                </button>
+                
+                <h3 style="margin-top: 25px;">Distributor Table</h3>
+                <div id="dist-table-container"></div>
             </div>
 
             <!-- Nontrivial plot 2 panel -->
-            <div class="panel">
-                <h2>Nontrivial Plot 2</h2>
+            <div class="panel-wide">
+                <h2>Criticality by Region</h2>
+
+                <div id="criticality-chart-container" style="margin-top: 20px;"></div>
+                <button onclick="loadCriticalityChart()" class="btn-load">
+                    Load Criticality Chart 
+                </button>
+
+                <h3 style="margin-top: 25px;">Criticality Table</h3>
+                <div id="criticality-table-container"></div>
             </div>
 
         </section>
@@ -1188,65 +1204,6 @@ async function allDisruptionsForCompany() {
             display.innerHTML = '<div style="color: #ef4444;">Error loading disruptions.</div>';
         }
     }
-
-
-// Companies affected by disruption event display
-async function companiesAffectedByEvent() {
-    const display = document.getElementById('event-companies-display');
-    if (!display) return;
-
-    const query = document.getElementById('event-company-search')?.value.trim() || "";
-
-    if (!query) {
-        display.innerHTML = '<p style="color: #9ca3af;">Enter an event name or ID to search.</p>';
-        return;
-    }
-
-    const numericMatch = query.match(/\d+/);
-    const eventID = numericMatch ? parseInt(numericMatch[0], 10) : 0;
-
-    display.innerHTML = '<div class="loading">Loading companies affected by this event...</div>';
-
-    const result = await managerFetch('companies_by_event', {
-        categoryID: isNaN(categoryID) ? 0 : categoryID,
-        eventName: query
-    });
-
-    if (result.success && Array.isArray(result.data)) {
-        if (result.data.length === 0) {
-            display.innerHTML = '<p style="color: #9ca3af;">No companies found for this event. Try a different name or ID.</p>';
-            return;
-        }
-
-        let html = '<div style="max-height: 360px; overflow-y: auto;">';
-
-        result.data.forEach((company) => {
-            const impact = (company.ImpactLevel || '').toLowerCase();
-            const color = impact === 'high' ? '#ef4444' :
-                        impact === 'medium' ? '#f97316' :
-                        impact === 'low' ? '#22c55e' : '#8b5cf6';
-
-            html += '<div style="display:flex; align-items:center; padding:10px; margin-bottom:8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
-            html += '<div style="flex:1;">';
-            html += '<strong>' + (company.CompanyName || 'Unknown Company') + '<div style="font-style: italic;">' + '(ID ' + (company.CompanyID || '') + ')' + '</div>' + '</strong>';
-            html += '<div style="font-size: 0.85em; color: #9ca3af;">Event ID: ' + (company.CategoryID || 'N/A') + '</div>';
-            html += '<div style="font-size: 0.8em; color: #9ca3af;">Category: ' + (company.CategoryName || 'Unknown Category') + '</div>';
-            html += '</div>';
-            html += '<div style="text-align: center; padding: 0 10px;">';
-            html += '<div style="font-size: 1.1em; font-weight: bold; color: ' + color + '; text-transform: capitalize;">';
-            html += (company.ImpactLevel || 'Unknown');
-            html += '</div>';
-            html += '<div style="font-size: 0.75em; color: ' + color + ';">Impact</div>';
-            html += '</div>';
-            html += '</div>';
-        });
-
-        html += '</div>';
-        display.innerHTML = html;
-    } else {
-        display.innerHTML = '<div style="color: #ef4444;">Error loading companies affected by this event.</div>';
-    }
-}
 
 </script>
 
@@ -1922,5 +1879,73 @@ function renderTransactions(title, txs = []) {
 
     return html + `</table>`;
 }
+async function companiesAffectedByDisruption() {
+    const display = document.getElementById('affected-companies-display');
+    if (!display) return;
+
+    const searchValue = document.getElementById('disruption-search')?.value.trim() || "";
+
+    display.innerHTML = '<div class="loading">Analyzing disruption impact on companies...</div>';
+
+    const result = await managerFetch('companies_by_event', {
+        eventID: searchValue
+    });
+
+    if (!result.success || !Array.isArray(result.data)) {
+        display.innerHTML = '<div style="color: #ef4444;">Error loading affected companies.</div>';
+        return;
+    }
+
+    const rows = result.data;
+    let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+    if (rows.length === 0) {
+        html += '<p style="color:#9ca3af;">No companies found affected by this disruption.</p>';
+        html += '</div>';
+        display.innerHTML = html;
+        return;
+    }
+
+    rows.slice(0, 10).forEach(company => {
+        const level = (company.ImpactLevel || "").toLowerCase();
+
+        const color =
+            level === "high" ? "#ef4444" :
+            level === "medium" ? "#f97316" :
+            level === "low" ? "#22c55e" : "#6b7280";
+
+        html += `
+            <div style="
+                display: flex;
+                align-items: center;
+                padding: 10px;
+                margin-bottom: 8px;
+                background: rgba(31,41,55,0.5);
+                border-radius: 8px;
+                border-left: 4px solid ${color};
+            ">
+                <div style="flex:1;">
+                    <strong>${company.CompanyName || "Unknown"}</strong>
+                </div>
+                <div style="text-align:center; padding:0 10px;">
+                    <div style="font-size:1.2em; font-weight:bold; color:${color}; text-transform:capitalize;">
+                        ${company.ImpactLevel}
+                    </div>
+                    <div style="font-size:0.75em; color:${color};">Impact Level</div>
+                </div>
+            </div>
+        `;
+    });
+
+    if (rows.length > 10) {
+        html += `<p style="color:#9ca3af; margin-top:10px; font-size:0.85em;">
+            Showing top 10 results. Enter an event ID for full details.
+        </p>`;
+    }
+
+    html += '</div>';
+    display.innerHTML = html;
+}
+
     
 </script>
