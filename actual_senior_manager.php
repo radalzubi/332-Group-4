@@ -3,7 +3,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// ajax_handler_manager_correct.php 
+// actual_senior_manager.php
 session_start();
 
 // Database connection
