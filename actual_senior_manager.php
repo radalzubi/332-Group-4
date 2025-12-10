@@ -1,4 +1,8 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // ajax_handler_manager_correct.php 
 session_start();
 
@@ -45,7 +49,8 @@ switch ($action) {
     case 'disruption_frequency':
         $startDate = !empty($_POST['startDate']) ? $_POST['startDate'] : '1000-01-01';
         $endDate   = !empty($_POST['endDate']) ? $_POST['endDate'] : date("Y-m-d");
-        $response = disruptionFrequency($conn, $startDate, $endDate);
+            $companyQuery = isset($_POST['companyQuery']) ? trim($_POST['companyQuery']) : '';
+        $response = disruptionFrequency($conn, $startDate, $endDate, $companyQuery);
         break;
 
      case 'company_search':
@@ -61,6 +66,15 @@ switch ($action) {
         $response = companyFinancialsByRegion($conn, $region);
         break;
 
+    case 'company_financials_overview':
+        $response = companyFinancialsOverview($conn);
+        break;
+
+    case 'company_financial_details':
+        $query = isset($_POST['query']) ? trim($_POST['query']) : '';
+        $response = companyFinancialDetails($conn, $query);
+        break;
+
     case 'top_distributors_by_volume':
         $search = !empty($_POST['search']) ? $_POST['search'] : '';
         $response = topDistributorsByVolume($conn, $search);
@@ -74,25 +88,51 @@ switch ($action) {
 
     case 'companies_by_event':
         $eventID = isset($_POST['eventID']) ? (int)$_POST['eventID'] : 0;
-        $response = companiesAffectedByDisruptionEvent($conn, $eventID);
+        $eventName = isset($_POST['eventName']) ? trim($_POST['eventName']) : '';
+        $response = companiesAffectedByDisruptionEvent($conn, $eventID, $eventName);
         break;
 
     case 'disruptions_by_company':
-        $name = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
-        $response = getDisruptionsByCompanyName($conn, $name);
+        $search = isset($_POST['companyQuery']) ? trim($_POST['companyQuery']) : '';
+        if ($search === '' && !empty($_POST['companyName'])) {
+            $search = trim($_POST['companyName']);
+        }
+        $response = getDisruptionsByCompanyName($conn, $search);
         break;
 
     case 'distributors_by_delay':
-        $response = distributorsByAverageDelay($conn);
+        $search = isset($_POST['search']) ? trim($_POST['search']) : '';
+        $response = distributorsByAverageDelay($conn, $search);
         break;
 
     case 'add_new_company':
-        $name = !empty($_POST['companyName']) ? $_POST['companyName'] : '';
+        $name     = isset($_POST['companyName']) ? trim($_POST['companyName']) : '';
         $location = isset($_POST['locationID']) ? (int)$_POST['locationID'] : 0;
-        $tier = !empty($_POST['tierLevel']) ? $_POST['tierLevel'] : '';
-        $type = !empty($_POST['companyType']) ? $_POST['companyType'] : '';
-        $response = addNewCompany($conn, $name, $location, $tier, $type);
-        break;
+        $tier     = isset($_POST['tierLevel']) ? (int)$_POST['tierLevel'] : 0;
+        $type     = isset($_POST['companyType']) ? trim($_POST['companyType']) : '';
+
+    // Hard validation
+        if ($name === '' || $location < 1 || $location > 13 || $tier < 1 || $tier > 3) {
+            echo json_encode([
+                'success' => false,
+                'error'   => 'Invalid input. Ensure all fields are filled correctly.'
+            ]);
+            return;
+        }
+
+    // Must be manufacturer, distributor, retailer
+    $validTypes = ['Manufacturer', 'Distributor', 'Retailer'];
+    if (!in_array($type, $validTypes)) {
+        echo json_encode([
+            'success' => false,
+            'error'   => 'Invalid company type.'
+        ]);
+        return;
+    }
+    $response = addNewCompany($conn, $name, $location, $tier, $type);
+    break;
+
+
 
     case 'criticality_by_region':
         $response = getCriticalityByRegion($conn);
@@ -361,16 +401,25 @@ function mostCriticalCompanies($conn) {
     ];
 }
 
-function disruptionFrequency($conn, $startDate, $endDate) {
+function disruptionFrequency($conn, $startDate, $endDate, $companyQuery = '') {
     $startDate = $conn->real_escape_string($startDate);
     $endDate   = $conn->real_escape_string($endDate);
+    $companyQuery = $conn->real_escape_string($companyQuery);
+
+    $companyFilter = '';
+    if ($companyQuery !== '') {
+        $companyFilter = "AND (c.CompanyName LIKE '%$companyQuery%' OR c.CompanyID LIKE '%$companyQuery%')";
+    }
 
     $sql = "
-        SELECT EventDate, COUNT(EventID) AS TotalDisruptions
-        FROM DisruptionEvent
-        WHERE EventDate BETWEEN '$startDate' AND '$endDate'
-        GROUP BY EventDate
-        ORDER BY EventDate ASC;
+        SELECT de.EventDate, COUNT(DISTINCT de.EventID) AS TotalDisruptions
+        FROM DisruptionEvent de
+            LEFT JOIN ImpactsCompany ic ON de.EventID = ic.EventID
+            LEFT JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+        WHERE de.EventDate BETWEEN '$startDate' AND '$endDate'
+        $companyFilter
+        GROUP BY de.EventDate
+        ORDER BY de.EventDate ASC;
     ";
 
     $result = $conn->query($sql);
@@ -452,6 +501,113 @@ function companyFinancialsByRegion($conn, $region) {
     ];
 }
 
+// query for overview of financials sorted by region
+function companyFinancialsOverview($conn) {
+    $sql = "
+        SELECT
+            l.ContinentName,
+            COUNT(DISTINCT c.CompanyID) AS CompanyCount,
+            ROUND(AVG(f.HealthScore), 2) AS AvgHealthScore,
+            MIN(f.RepYear) AS FirstYear,
+            MAX(f.RepYear) AS LastYear
+        FROM Company c
+        JOIN Location l ON c.LocationID = l.LocationID
+        JOIN FinancialReport f ON c.CompanyID = f.CompanyID
+        GROUP BY l.ContinentName
+        ORDER BY l.ContinentName;
+    ";
+
+    $result = $conn->query($sql);
+
+    if (!$result) {
+        return [
+            'success' => false,
+            'error' => 'Database query failed: ' . $conn->error
+        ];
+    }
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'ContinentName' => $row['ContinentName'],
+            'CompanyCount' => (int) $row['CompanyCount'],
+            'AvgHealthScore' => $row['AvgHealthScore'] !== null ? (float)$row['AvgHealthScore'] : null,
+            'FirstYear' => $row['FirstYear'],
+            'LastYear' => $row['LastYear']
+        ];
+    }
+
+    return [
+        'success' => true,
+        'data' => $rows
+    ];
+}
+
+// allows previous function to be overridden by user search
+function companyFinancialDetails($conn, $query) {
+    $search = trim($query);
+    if ($search === '') {
+        return [
+            'success' => false,
+            'error' => 'Please provide a company name or ID.'
+        ];
+    }
+
+    $isId = ctype_digit($search);
+    if ($isId) {
+        $condition = "c.CompanyID = " . intval($search);
+    } else {
+        $safe = $conn->real_escape_string($search);
+        $condition = "c.CompanyName LIKE '%$safe%'";
+    }
+
+    $sql = "
+        SELECT
+            c.CompanyID,
+            c.CompanyName,
+            c.Type AS CompanyType,
+            l.ContinentName,
+            l.CountryName,
+            f.RepYear,
+            f.Quarter,
+            f.HealthScore
+        FROM Company c
+        JOIN Location l ON c.LocationID = l.LocationID
+        JOIN FinancialReport f ON c.CompanyID = f.CompanyID
+        WHERE $condition
+        ORDER BY f.RepYear DESC, f.Quarter DESC;
+    ";
+
+    $result = $conn->query($sql);
+
+    if (!$result) {
+        return [
+            'success' => false,
+            'error' => 'Database query failed: ' . $conn->error
+        ];
+    }
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'CompanyID' => $row['CompanyID'],
+            'CompanyName' => $row['CompanyName'],
+            'CompanyType' => $row['CompanyType'],
+            'ContinentName' => $row['ContinentName'],
+            'CountryName' => $row['CountryName'],
+            'RepYear' => $row['RepYear'],
+            'Quarter' => $row['Quarter'],
+            'HealthScore' => $row['HealthScore'] !== null ? (float)$row['HealthScore'] : null
+        ];
+    }
+
+    return [
+        'success' => true,
+        'data' => $rows
+    ];
+}
+
+// query for company search
 function companySearch($conn, $companyName, $startDate = null, $endDate = null) {
     $companyNameEsc = $conn->real_escape_string($companyName);
     $start = $startDate ? "'".$conn->real_escape_string($startDate)."'" : "'1000-01-01'";
@@ -803,18 +959,85 @@ function distributorDetailsByName($conn, $distributorName) {
     ];
 }
 
-function getDisruptionsByCompanyName($conn, $companyName) {
-    $companyEscaped = $conn->real_escape_string($companyName);
+function companiesAffectedByDisruptionEvent($conn, $eventID, $eventName = '') {
+    $eventID = (int)$eventID;
+    $eventName = trim($eventName);
+
+    if ($eventID <= 0 && $eventName === '') {
+        return [
+            'success' => false,
+            'error' => 'Event name or ID is required.'
+        ];
+    }
+
+    $conditions = [];
+    if ($eventID > 0) {
+        $conditions[] = "ic.EventID = $eventID";
+    }
+    if ($eventName !== '') {
+        $safeName = $conn->real_escape_string($eventName);
+        $conditions[] = "dc.CategoryName LIKE '%$safeName%'";
+    }
+
+    $whereClause = implode(' OR ', $conditions);
+    
+    $sql = "
+        SELECT c.CompanyID, c.CompanyName, ic.ImpactLevel, ic.EventID, dc.CategoryName
+        FROM ImpactsCompany ic
+        	JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
+			JOIN DisruptionEvent de ON ic.EventID = de.EventID
+        	LEFT JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
+        WHERE $whereClause
+        ORDER BY c.CompanyName;
+    ";
+
+    $result = $conn->query($sql);
+    if (!$result) {
+        return [
+            'success' => false,
+            'error' => 'Database query failed: ' . $conn->error
+        ];
+    }
+
+    $rows = [];
+    while ($row = $result->fetch_assoc()) {
+        $rows[] = [
+            'CompanyID' => $row['CompanyID'],
+            'CompanyName' => $row['CompanyName'],
+            'ImpactLevel' => $row['ImpactLevel'],
+            'EventID' => $row['EventID'],
+            'CategoryName' => $row['CategoryName']
+        ];
+    }
+
+    return [
+        'success' => true,
+        'data' => $rows
+    ];
+}
+
+function getDisruptionsByCompanyName($conn, $searchTerm) {
+    $query = trim($searchTerm);
+    if ($query === '') {
+        return [
+            'success' => false,
+            'error' => 'Company name or ID is required.'
+        ];
+    }
+
+    $searchEscaped = $conn->real_escape_string($query);
 
     $sql = "
         SELECT de.EventID, de.EventDate, de.EventRecoveryDate,
-               dc.CategoryName, ic.ImpactLevel
+            dc.CategoryName, ic.ImpactLevel,
+            c.CompanyID, c.CompanyName
         FROM ImpactsCompany ic
         JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
         JOIN DisruptionEvent de ON ic.EventID = de.EventID
         JOIN DisruptionCategory dc ON de.CategoryID = dc.CategoryID
-        WHERE c.CompanyName = '$companyEscaped'
-        ORDER BY de.EventDate;
+        WHERE ('$searchEscaped' REGEXP '^[0-9]+$' AND c.CompanyID = '$searchEscaped') 
+        OR ('$searchEscaped' NOT REGEXP '^[0-9]+$' AND c.CompanyName LIKE '%$searchEscaped%')
+        ORDER BY de.EventDate DESC;
     ";
 
     $result = $conn->query($sql);
@@ -833,7 +1056,9 @@ function getDisruptionsByCompanyName($conn, $companyName) {
             'EventDate' => $row['EventDate'],
             'EventRecoveryDate' => $row['EventRecoveryDate'],
             'CategoryName' => $row['CategoryName'],
-            'ImpactLevel' => $row['ImpactLevel']
+            'ImpactLevel' => $row['ImpactLevel'],
+            'CompanyID' => $row['CompanyID'],
+            'CompanyName' => $row['CompanyName']
         ];
     }
 
@@ -843,15 +1068,27 @@ function getDisruptionsByCompanyName($conn, $companyName) {
     ];
 }
 
+function distributorsByAverageDelay($conn, $search = '') {
+    $search = trim($search);
+    $filterClause = '';
 
-function distributorsByAverageDelay($conn) {
+    if ($search !== '') {
+        $searchEscaped = $conn->real_escape_string($search);
+        if (ctype_digit($search)) {
+            $filterClause = " AND c.CompanyID = {$searchEscaped} ";
+        } else {
+            $filterClause = " AND c.CompanyName LIKE '%{$searchEscaped}%' ";
+        }
+    }
+
     $sql = "
         SELECT c.CompanyID, c.CompanyName,
                AVG(DATEDIFF(s.ActualDate, s.PromisedDate)) AS AvgDelayDays
         FROM Distributor d
-        JOIN Company c ON d.CompanyID = c.CompanyID
-        JOIN Shipping s ON d.CompanyID = s.DistributorID
+            JOIN Company c ON d.CompanyID = c.CompanyID
+            JOIN Shipping s ON d.CompanyID = s.DistributorID
         WHERE s.ActualDate IS NOT NULL
+        {$filterClause}
         GROUP BY c.CompanyID, c.CompanyName
         ORDER BY AvgDelayDays DESC;
     ";
@@ -881,45 +1118,68 @@ function distributorsByAverageDelay($conn) {
 }
 
 function addNewCompany($conn, $companyName, $locationID, $tierLevel, $companyType) {
+
     $companyEscaped = $conn->real_escape_string($companyName);
-    $tierEscaped    = $conn->real_escape_string($tierLevel);
     $typeEscaped    = $conn->real_escape_string($companyType);
     $locationID     = (int)$locationID;
+    $tierLevel      = (int)$tierLevel;
+
+    // Disable autocommit for manual transaction control
+    $conn->autocommit(FALSE);
 
     try {
-        $conn->begin_transaction();
 
-        // Insert into Company
+        // Insert into Company table
         $sqlCompany = "
             INSERT INTO Company (CompanyName, LocationID, TierLevel, Type)
-            VALUES ('$companyEscaped', $locationID, '$tierEscaped', '$typeEscaped');
+            VALUES ('$companyEscaped', $locationID, $tierLevel, '$typeEscaped')
         ";
+
         if (!$conn->query($sqlCompany)) {
             throw new Exception("Company insert failed: " . $conn->error);
         }
 
         $newCompanyID = $conn->insert_id;
 
-        // Insert into specific type table
+        // Insert into the specific type table
         switch ($companyType) {
-            case "Distributor":
-                $sqlType = "INSERT INTO Distributor (CompanyID) VALUES ($newCompanyID);";
-                break;
+
             case "Manufacturer":
-                $sqlType = "INSERT INTO Manufacturer (CompanyID, FactoryCapacity) VALUES ($newCompanyID, 0);";
+                $sqlType = "
+                    INSERT INTO Manufacturer (CompanyID, FactoryCapacity)
+                    VALUES ($newCompanyID, 0)
+                ";
                 break;
+
+            case "Distributor":
+                $sqlType = "
+                    INSERT INTO Distributor (CompanyID)
+                    VALUES ($newCompanyID)
+                ";
+                break;
+
             case "Retailer":
-                $sqlType = "INSERT INTO Retailer (CompanyID) VALUES ($newCompanyID);";
+                $sqlType = "
+                    INSERT INTO Retailer (CompanyID)
+                    VALUES ($newCompanyID)
+                ";
                 break;
+
             default:
-                throw new Exception("Company must be a Distributor, Manufacturer, or Retailer.");
+                throw new Exception("Invalid company type.");
         }
 
         if (!$conn->query($sqlType)) {
-            throw new Exception("Type insert failed: " . $conn->error);
+            throw new Exception("Subtype insert failed: " . $conn->error);
         }
 
-        $conn->commit();
+        // Commit the transaction
+        if (!$conn->commit()) {
+            throw new Exception("Commit failed: " . $conn->error);
+        }
+
+        // Re-enable autocommit
+        $conn->autocommit(TRUE);
 
         return [
             'success' => true,
@@ -928,13 +1188,17 @@ function addNewCompany($conn, $companyName, $locationID, $tierLevel, $companyTyp
         ];
 
     } catch (Exception $e) {
+        // Roll back on error
         $conn->rollback();
+        $conn->autocommit(TRUE);
+
         return [
             'success' => false,
             'error' => $e->getMessage()
         ];
     }
 }
+
 
 
 
@@ -1016,6 +1280,7 @@ if ($conn) {
     $conn->close();
 }
 
+// nontrivial plot #1
 function nontrivialDistributorPlot($conn) {
     $sql = "
         SELECT 
@@ -1042,13 +1307,14 @@ function nontrivialDistributorPlot($conn) {
     return ["success" => true, "data" => $rows];
 }
 
+// nontrivial plot #2
 function nontrivialCriticalityPlot($conn) {
     $sql = "
         SELECT 
             l.ContinentName AS Region,
             SUM(
-                COALESCE(downstreamCounts.downCount,0) * 
-                COALESCE(highImpactCounts.highImpact,0)
+                COALESCE(downstreamCounts.downCount, 0) * 
+                COALESCE(highImpactCounts.highImpact, 0)
             ) AS CriticalityScore
         FROM Company c
         JOIN Location l ON c.LocationID = l.LocationID
@@ -1057,16 +1323,14 @@ function nontrivialCriticalityPlot($conn) {
             SELECT UpstreamCompanyID, COUNT(DISTINCT DownstreamCompanyID) AS downCount
             FROM DependsOn
             GROUP BY UpstreamCompanyID
-        ) AS downstreamCounts
-            ON downstreamCounts.UpstreamCompanyID = c.CompanyID
+        ) AS downstreamCounts ON downstreamCounts.UpstreamCompanyID = c.CompanyID
 
         LEFT JOIN (
             SELECT AffectedCompanyID, COUNT(DISTINCT EventID) AS highImpact
             FROM ImpactsCompany
             WHERE ImpactLevel = 'High'
             GROUP BY AffectedCompanyID
-        ) AS highImpactCounts
-            ON highImpactCounts.AffectedCompanyID = c.CompanyID
+        ) AS highImpactCounts ON highImpactCounts.AffectedCompanyID = c.CompanyID
 
         GROUP BY l.ContinentName
         ORDER BY CriticalityScore DESC;
@@ -1075,48 +1339,23 @@ function nontrivialCriticalityPlot($conn) {
     $result = $conn->query($sql);
 
     if (!$result) {
-        return ["success" => false, "error" => $conn->error];
-    }
-
-    $rows = [];
-    while ($row = $result->fetch_assoc()) {
-        $rows[] = $row;
-    }
-
-    return ["success" => true, "data" => $rows];
-}
-
-function companiesAffectedByDisruptionEvent($conn, $eventID) {
-    $eventID = (int)$eventID;
-
-    $sql = "
-        SELECT c.CompanyID, c.CompanyName, ic.ImpactLevel
-        FROM ImpactsCompany ic
-        JOIN Company c ON ic.AffectedCompanyID = c.CompanyID
-        WHERE ic.EventID = $eventID
-        ORDER BY c.CompanyName;
-    ";
-
-    $result = $conn->query($sql);
-    if (!$result) {
         return [
             'success' => false,
-            'error' => 'Database query failed: ' . $conn->error
+            'error'   => 'Database query failed: ' . $conn->error
         ];
     }
 
     $rows = [];
     while ($row = $result->fetch_assoc()) {
         $rows[] = [
-            'CompanyID' => $row['CompanyID'],
-            'CompanyName' => $row['CompanyName'],
-            'ImpactLevel' => $row['ImpactLevel']
+            'Region' => $row['Region'],
+            'CriticalityScore' => (int) $row['CriticalityScore']
         ];
     }
 
     return [
         'success' => true,
-        'data' => $rows
+        'data'    => $rows
     ];
 }
 
