@@ -292,11 +292,6 @@ if ($page === 'scm' && $role !== 'scm') {
             max-width: 200px;
         }
 
-        .critical-companies-search-box input {
-            width: 100%;
-            max-width: 200px;
-        }
-
     </style>
 
 <script src="script.js" defer></script>
@@ -414,19 +409,16 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Regional disruption overview panel -->
             <div class="panel">
                 <h2>Regional Disruptions</h2>
-                <button onclick="regionalDisruptions()" class="btn-load">View</button>
-                <div id="regional-disruptions-display" style="margin-top: 15px;">
-                    <div class="loading">Click "View" to see data</div>
-                </div>
+                <div id="regional-disruptions-display" style="margin-top: 15px;"></div>
             </div>
 
             <!-- Most critical companies panel -->
             <div class="panel">
                 <h2>Critical Companies</h2>
-                <div class="critical-companies-search" style="background: transparent; padding: 10px 0;">
-                    <div class="critical-companies-search-box">
-                        <input type="text" id="critical-companies-search" placeholder="Filter by company name or ID">
-                        <button onclick="mostCriticalCompanies()" class="btn-critical-companies-search">Find</button>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="critical-companies-search" placeholder="Enter company name or ID">
+                        <button onclick="mostCriticalCompanies()" class="btn-company-search">Search</button>
                     </div>
                 <div id="critical-companies-display" style="margin-top: 15px;"></div>
                 </div>
@@ -440,6 +432,7 @@ if ($page === 'scm' && $role !== 'scm') {
                     <input type="date" id="disruption-start-date" value="2019-01-01">
                     <label>To:</label>
                     <input type="date" id="disruption-end-date" value="2025-12-31">
+                    <input type="text" id="disruption-company-filter" placeholder="Filter by company name or ID">
                     <button onclick="disruptionFrequency()" class="btn-load">View</button>
                 </div>
 
@@ -453,14 +446,14 @@ if ($page === 'scm' && $role !== 'scm') {
                 <h2>Company Financials</h2>
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
                     <div class="company-search-box">
-                        <input type="text" id="company-financial-search" placeholder="Sort by company name or ID">
-                        <button onclick="searchCompany()" class="btn-company-search">Search</button>
+                        <input type="text" id="company-financial-search" placeholder="Enter company name or ID">
+                        <button onclick="searchCompanyFinancials()" class="btn-company-search">Search</button>
                     </div>
-                    <div id="company-financial-results"></div>
+                    
                 </div>
 
-                <div id="" style="margin-top: 15px;">
-                    <div class="loading">Search company financial reports by name or ID, sorted by region.</div>
+                <div id="company-financial-display" style="margin-top: 15px;">
+                    <div class="loading">Loading company financials by region...</div>
                 </div>
             </div>
 
@@ -480,14 +473,14 @@ if ($page === 'scm' && $role !== 'scm') {
             <!-- Companies affected by disruption event panel -->
             <div class="panel">
                 <h2>Companies Affected by Disruption Event</h2>
-               
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
-                    <input type="text" id="disruption-search" placeholder="Enter Disruption Event ID">
-                    <button onclick="companiesAffectedByDisruption()" class="btn-load">View</button>
+                    <div class="company-search-box">
+                        <input type="text" id="event-company-search" placeholder="Enter disruption event name or ID">
+                        <button onclick="companiesAffectedByEvent()" class="btn-company-search">Search</button>
+                    </div>
                 </div>
-
-                <div id="affected-companies-display" style="margin-top: 15px;">
-                    <div class="loading">Enter event ID and click 'View'</div>
+                <div id="event-companies-display" style="margin-top: 15px;">
+                    <div class="loading">Search by disruption event name or event ID.</div>
                 </div>
             </div>
 
@@ -502,39 +495,38 @@ if ($page === 'scm' && $role !== 'scm') {
             </div>
 
                 <div id="company-disruptions-display" style="margin-top: 15px;">
-                    <div class="loading">Search by company name or ID to see all disruptions.</div>
+                    <div class="loading">Search by company name or ID.</div>
                 </div>
             </div>
 
             <!-- Distributors sorted by average delay panel -->
             <div class="panel">
                 <h2>Distributor Average Delay (Days)</h2>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box distributor-search-box">
+                        <input type="text" id="distributor-delay-search" placeholder="Enter distributor name or ID">
+                        <button onclick="loadDistributorDelays()" class="btn-company-search">Find</button>
+                    </div>
+                </div>
+                <div id="distributor-delay-display" style="margin-top: 15px;">
+                    <div class="loading">Loading distributor delays...</div>
+                </div>
             </div>
 
             <!-- Nontrivial plot 1 panel-->
-            <div class="panel-wide">
-                <h2>Top Distributors by Shipments</h2>
-
-                <div id="dist-chart-containers" style="margin-top:20px;"></div>
-                <button onclick="loadDistributorChart()" class="btn-load">
-                    Load Distributor Chart 
-                </button>
-                
-                <h3 style="margin-top: 25px;">Distributor Table</h3>
-                <div id="dist-table-container"></div>
+            <div class="panel">
+                <h2>Distributors by Shipments</h2>
+                <div id="nontrivial-plot-1" class="trend-scroll">
+                    <div class="loading">Loading distributor shipment volumes...</div>
+                </div>
             </div>
 
             <!-- Nontrivial plot 2 panel -->
-            <div class="panel-wide">
-                <h2>Criticality by Region</h2>
-
-                <div id="criticality-chart-container" style="margin-top: 20px;"></div>
-                <button onclick="loadCriticalityChart()" class="btn-load">
-                    Load Criticality Chart 
-                </button>
-
-                <h3 style="margin-top: 25px;">Criticality Table</h3>
-                <div id="criticality-table-container"></div>
+            <div class="panel">
+                <h2>Vulnurable Regions</h2>
+                <div id="regional-criticality-display" class="disruptions-4">
+                    <div class="loading">Loading chart...div>
+                </div>
             </div>
 
         </section>
@@ -730,7 +722,7 @@ const bars = data.map((item, idx) => {
 
                     html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
                     html += '<div style="flex: 1;">';
-            html += '<strong>' + (distributor.CompanyName || 'Unknown Company') + '<div style="font-style: italic;">' + '(ID ' + (distributor.CompanyID || '') + ')' + '</div>' + '</strong>';
+            		html += '<strong>' + (distributor.CompanyName || 'Unknown Company') + '<div style="font-style: italic; font-size: 0.85em;">' + '(ID ' + (distributor.CompanyID || '') + ')' + '</div>' + '</strong>';
                     html += '</div>';
                     html += '<div style="text-align: center; padding: 0 10px;">';
                     html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + color + ';">';
@@ -754,55 +746,176 @@ const bars = data.map((item, idx) => {
         }
     }
 
-    // Company financials by region
-        async function companyFinancialsByRegion() {
-        const display = document.getElementById('regional-financials-display');
+// nontrivial plot 1, maps distributor shipments via bar chart
+    async function loadDistributorShipmentPlot() {
+        const display = document.getElementById('nontrivial-plot-1');
+        if (!display) return;
+
+        display.innerHTML = '<div class="loading">Loading distributor shipment volumes...</div>';
+
+        // Pull shipment totals directly from the SQL database via AJAX
+        const result = await managerFetch('nontrivial_distributor_plot');
+
+        if (!result.success || !Array.isArray(result.data)) {
+            const message = result.error ? result.error : 'No distributor shipment data available.';
+            display.innerHTML = `<div class="error-message">${message}</div>`;
+            return;
+        }
+
+        const distributors = result.data.map((row, idx) => ({
+            id: row.CompanyID || idx,
+            name: row.CompanyName || `Distributor ${idx + 1}`,
+            volume: Number(row.TotalShipments ?? row.totalShipped ?? 0) || 0
+        }));
+
+        if (distributors.length === 0) {
+            display.innerHTML = '<p style="color:#9ca3af;">No distributor shipments found.</p>';
+            return;
+        }
+
+        const sorted = distributors.sort((a, b) => b.volume - a.volume);
+        const names = sorted.map(item => item.name);
+        const volumes = sorted.map(item => item.volume);
+
+        const chartId = 'nontrivial-plot-1-chart';
+        const widthHint = Math.max((names.length * 28) + 360, display.clientWidth || 720);
+        const heightHint = Math.max(320, names.length * 34);
+
+        display.innerHTML = `<div class="trend-scroll"><div id="${chartId}"></div></div>`;
+
+        Plotly.newPlot(chartId, [
+            {
+                type: 'bar',
+                orientation: 'h',
+                x: volumes,
+                y: names,
+                marker: {
+                    color: '#60a5fa',
+                    line: { color: '#1e3a8a', width: 1.2 }
+                },
+                text: volumes.map(v => v.toLocaleString()),
+                textposition: 'outside',
+                hovertemplate: '<b>%{y}</b><br>Shipments: %{x}<extra></extra>'
+            }
+        ], {
+            title: { text: 'Distributor Shipment Volume', font: { color: '#e5e7eb', size: 16 } },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            height: heightHint,
+            width: widthHint,
+            margin: { t: 50, r: 30, b: 50, l: 80 },
+            xaxis: {
+                title: 'Total Shipments',
+                tickfont: { color: '#e5e7eb' },
+                titlefont: { color: '#e5e7eb' }
+            },
+            yaxis: {
+                automargin: true,
+                tickfont: { color: '#e5e7eb' }
+            },
+            bargap: 0.25
+        });
+    }
+
+    // Company financials panel, overview & company search
+    async function loadCompanyFinancialOverview() {
+        const display = document.getElementById('company-financial-display');
         if (!display) return;
 
         display.innerHTML = '<div class="loading">Loading company financials by region...</div>';
 
-        const startDate = document.getElementById('finance-start-date')?.value || '2020-01-01';
-        const endDate   = document.getElementById('finance-end-date')?.value || '2025-12-31';
-        const companyType = document.getElementById('company-type-select')?.value || '';
-
-        const result = await managerFetch('avg_financial_health', {
-            startDate,
-            endDate,
-            companyType
-        });
+        const result = await managerFetch('company_financials_overview');
 
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-            let html = '<div style="max-height: 360px; overflow-y: auto;">';
+            const regions = result.data.sort((a, b) => (a.ContinentName || '').localeCompare(b.ContinentName || ''));
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">';
+                        regions.forEach(region => {
+                const avg = Number(region.AvgHealthScore || 0);
+                const color = avg >= 80 ? '#22c55e' : avg >= 60 ? '#eab308' : avg >= 40 ? '#f97316' : '#ef4444';
 
-            result.data.forEach((company, index) => {
-                const health = Number(company.avgHealthScore) || 0;
-                const color = health >= 80 ? '#22c55e' :
-                            health >= 60 ? '#eab308' :
-                            health >= 40 ? '#f97316' : '#ef4444';
-
-                html += `<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 10px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ${color};">`;
-
-                html += `<div style="flex: 1;">`;
-                html += `<strong>#${index + 1} ${company.CompanyName || 'Unknown'}</strong>`;
-                html += `<div style="font-size: 0.85em; color: #9ca3af; margin-top: 2px;">${company.CompanyType || 'Unknown'} | ${company.Region || 'Unknown Region'}</div>`;
-                html += `</div>`;
-
-                html += `<div style="text-align: center; padding: 0 10px;">`;
-                html += `<div style="font-size: 1.2em; font-weight: bold; color: ${color};">${health.toFixed(1)}</div>`;
-                html += `<div style="font-size: 0.75em; color: ${color};">Health Score</div>`;
-                html += `</div>`;
-
-                html += `<div style="padding-left: 10px;"><button onclick="viewCompanyDetails('${company.CompanyName}')" style="font-size: 0.75em; padding: 4px 8px; background: #1f2937; border: 1px solid #4b5563; border-radius: 4px; color: #93c5fd;">View</button></div>`;
-
-                html += `</div>`;
+                html += `<div class="company-card" style="border-left: 4px solid ${color};">`;
+                html += `<h3 style="margin-bottom:6px;">${region.ContinentName || 'Unknown Region'}</h3>`;
+                html += `<div class="company-info-row"><span class="company-info-label">Avg Health:</span><span class="company-info-value" style="color:${color};">${avg.toFixed(2)}</span></div>`;
+                html += `<div class="company-info-row"><span class="company-info-label">Companies:</span><span class="company-info-value">${region.CompanyCount || 0}</span></div>`;
+                html += '</div>';
             });
 
             html += '</div>';
             display.innerHTML = html;
         } else {
-            display.innerHTML = '<div style="color: #ef4444;">No company financial data available.</div>';
+            const msg = result.error ? result.error : 'No regional financial data available.';
+            display.innerHTML = `<div style="color: #ef4444;">${msg}</div>`;
         }
     }
+
+    async function searchCompanyFinancials() {
+        const display = document.getElementById('company-financial-display');
+        const input = document.getElementById('company-financial-search');
+        if (!display || !input) return;
+
+        const query = input.value.trim();
+
+        if (query === '') {
+            loadCompanyFinancialOverview();
+            return;
+        }
+
+        display.innerHTML = `<div class="loading">Searching financials for "${query}"...</div>`;
+
+        const result = await managerFetch('company_financial_details', { query });
+
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+            renderCompanyFinancialDetails(display, result.data);
+        } else {
+            const msg = result.error ? result.error : 'No financial reports found for that company.';
+            display.innerHTML = `<div style="color:#9ca3af;">${msg}</div>`;
+        }
+    }
+
+// User search for financial details function
+function renderCompanyFinancialDetails(display, rows) {
+        const meta = rows[0];
+        const healthScores = rows.map(r => Number(r.HealthScore || 0)).filter(n => !Number.isNaN(n));
+        const avgHealth = healthScores.length ? (healthScores.reduce((a, b) => a + b, 0) / healthScores.length) : 0;
+
+        let html = '<div class=\"company-card\">';
+        html += `<h3>${meta.CompanyName || 'Unknown Company'} <span style="font-size:0.85em; color:#9ca3af;">(ID ${meta.CompanyID || 'N/A'})</span></h3>`;
+        html += `<div class="company-info-row"><span class="company-info-label">Type:</span><span class="company-info-value">${meta.CompanyType || 'Unknown'}</span></div>`;
+        html += `<div class="company-info-row"><span class="company-info-label">Region:</span><span class="company-info-value">${meta.ContinentName || 'Unknown'} (${meta.CountryName || 'N/A'})</span></div>`;
+        html += `<div class="company-info-row"><span class="company-info-label">Average Health:</span><span class="company-info-value">${avgHealth.toFixed(2)}</span></div>`;
+        html += '</div>';
+
+        html += '<div style=\"max-height: 320px; overflow-y: auto; margin-top: 10px;\">';
+        html += '<table style=\"width:100%; border-collapse: collapse; font-size: 0.9rem;\">';
+        html += '<thead><tr style=\"text-align:left; color:#9ca3af;\"><th style=\"padding:6px;\">Year</th><th style=\"padding:6px;\">Quarter</th><th style=\"padding:6px;\">Health Score</th></tr></thead><tbody>';
+
+        rows.sort((a, b) => (Number(b.RepYear) - Number(a.RepYear)) || (Number(b.Quarter) - Number(a.Quarter)));
+        rows.forEach(row => {
+            const score = Number(row.HealthScore || 0);
+            const color = score >= 80 ? '#22c55e' : score >= 60 ? '#eab308' : score >= 40 ? '#f97316' : '#ef4444';
+            html += `<tr style=\"border-bottom:1px solid #374151;\">
+                        <td style=\"padding:6px; color:#e5e7eb;\">${row.RepYear || '—'}</td>
+                        <td style=\"padding:6px; color:#e5e7eb;\">${row.Quarter || '—'}</td>
+                        <td style=\"padding:6px; color:${color}; font-weight:600;\">${score.toFixed(2)}</td>
+                    </tr>`;
+        });
+
+        html += '</tbody></table></div>';
+        display.innerHTML = html;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadCompanyFinancialOverview();
+        const input = document.getElementById('company-financial-search');
+        if (input) {
+            input.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    searchCompanyFinancials();
+                }
+            });
+        }
+    });
 
 // Add new company function
 async function addNewCompany() {
@@ -838,58 +951,69 @@ async function addNewCompany() {
     async function regionalDisruptions() {
         const display = document.getElementById('regional-disruptions-display');
         if (!display) return;
-        
-        display.innerHTML = '<div class="loading">Loading regional data...</div>';
-        
+
+        display.innerHTML = '<div class="loading">Loading regional disruption overview...</div>';
+
         const result = await managerFetch('regional_disruptions', {
             startDate: '2020-01-01',
             endDate: '2025-12-31'
         });
         
-        if (result.success && result.data) {
-            let html = '<div style="max-height: 400px; overflow-y: auto;">';
-            
-            if (result.data.length === 0) {
-                html += '<p style="color: #9ca3af;">No regional data available</p>';
-            } else {
-                result.data.slice(0, 10).forEach(function(region) {
-                    const total = region.TotalDisruptions || 0;
-                    const high = region.HighImpactDisruptions || 0;
-                    const medium = region.mediumImpact || 0;
-                    const low = region.lowImpact || 0;
-                    
-                    html += '<div style="margin-bottom: 15px;">';
-                    html += '<div style="display: flex; justify-content: space-between; margin-bottom: 5px;">';
-                    html += '<strong>' + (region.ContinentName || 'Unknown') + '</strong>';
-                    html += '<span style="color: #9ca3af;">' + total + ' events</span>';
-                    html += '</div>';
-                    
-                    if (total > 0) {
-                        // Progress bar showing severity distribution
-                        html += '<div style="background: #374151; height: 20px; border-radius: 10px; overflow: hidden;">';
-                        html += '<div style="display: flex; height: 100%;">';
-                        if (high > 0) html += '<div style="background: #ef4444; width: ' + ((high/total)*100) + '%;"></div>';
-                        if (medium > 0) html += '<div style="background: #f59e0b; width: ' + ((medium/total)*100) + '%;"></div>';
-                        if (low > 0) html += '<div style="background: #22c55e; width: ' + ((low/total)*100) + '%;"></div>';
-                        html += '</div></div>';
-                        
-                        html += '<div style="font-size: 0.8em; color: #9ca3af; margin-top: 3px;">';
-                        html += 'High: ' + high + ' | Med: ' + medium + ' | Low: ' + low;
-                        if (region.avgRecoveryTime) {
-                            html += ' | Avg Recovery: ' + region.avgRecoveryTime + 'h';
-                        }
-                        html += '</div>';
-                    }
-                    
-                    html += '</div>';
-                });
-            }
-            
-            html += '</div>';
-            display.innerHTML = html;
-        } else {
+        if (!result.success || !Array.isArray(result.data)) {
             display.innerHTML = '<div style="color: #ef4444;">Error loading regional data</div>';
+            return;
         }
+
+        const regions = result.data
+            .map(region => ({
+                name: region.ContinentName || 'Unknown',
+                total: Number(region.TotalDisruptions || 0),
+                high: Number(region.HighImpactDisruptions || 0)
+            }))
+            .filter(region => region.total > 0 || region.high > 0)
+            .sort((a, b) => b.total - a.total);
+
+        if (regions.length === 0) {
+            display.innerHTML = '<p style="color: #9ca3af;">No regional disruption activity for the selected window.</p>';
+            return;
+        }
+
+        const chartId = 'regional-disruptions-chart';
+        const labels = regions.map(region => region.name);
+        const highImpact = regions.map(region => region.high);
+        const remaining = regions.map(region => Math.max(region.total - region.high, 0));
+
+        display.innerHTML = `
+            <div id="${chartId}" class="charts-123"></div>
+        `;
+
+        Plotly.newPlot(chartId, [
+            {
+                type: 'bar',
+                name: 'High impact disruptions',
+                x: labels,
+                y: highImpact,
+                marker: { color: '#c084fc' },
+                hovertemplate: '<b>%{x}</b><br>High impact: %{y}<extra></extra>'
+            },
+            {
+                type: 'bar',
+                name: 'Other disruptions',
+                x: labels,
+                y: remaining,
+                marker: { color: '#38bdf8' },
+                hovertemplate: '<b>%{x}</b><br>Other: %{y}<extra></extra>'
+            }
+        ], {
+            title: { text: 'Disruptions by Region', font: { size: 16, color: '#e5e7eb' } },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            barmode: 'stack',
+            margin: { t: 40, r: 20, b: 30, l: 55 },
+            xaxis: { title: 'Region', tickfont: { color: '#e5e7eb' }, titlefont: { color: '#e5e7eb' } },
+            yaxis: { title: '# of Disruptions', tickfont: { color: '#e5e7eb' }, titlefont: { color: '#e5e7eb' }, rangemode: 'tozero' },
+            legend: { orientation: 'h', y: -0.35, font: { color: '#e5e7eb' } }
+        });
     }
         
 // Displays disruption frequency over user defined time
@@ -899,39 +1023,54 @@ async function addNewCompany() {
 
         const startDate = document.getElementById('disruption-start-date');
         const endDate = document.getElementById('disruption-end-date');
+        const companyFilter = document.getElementById('disruption-company-filter');
 
         display.innerHTML = '<div class="loading">Plotting disruption frequency...</div>';
 
+        const startDateValue = startDate ? startDate.value : '2019-01-01';
+        const endDateValue = endDate ? endDate.value : '2025-12-31';
+        const companyQuery = companyFilter ? companyFilter.value.trim() : '';
+
         const result = await managerFetch('disruption_frequency', {
-            startDate: startDate ? startDate.value : '2019-01-01',
-            endDate: endDate ? endDate.value : '2025-12-31'
+            startDate: startDateValue,
+            endDate: endDateValue,
+            companyQuery
         });
 
-        if (result.success && result.data && result.data.length > 0) {
-            display.innerHTML = renderDisruptionTrendChart(result.data);
-            return;
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+            const normalized = result.data
+                .map(row => ({
+                    period: row.EventDate,
+                    total: Number(row.TotalDisruptions || 0)
+                }))
+                .filter(row => row.period)
+                .sort((a, b) => new Date(a.period) - new Date(b.period));
+
+            if (normalized.length > 0) {
+                const widthHint = Math.max(display.clientWidth || 0, normalized.length * 70);
+                display.innerHTML = renderDisruptionTrendChart(normalized, {
+                    width: widthHint,
+                    height: 320,
+                    companyQuery
+                });
+                return;
+            }
         }
 
-        // If nothing comes back (or the DB isn't reachable), show a helpful note and demo trend
-        const fallback = [
-            { period: '2024-01-01', total: 3, high: 1, medium: 1, low: 1 },
-            { period: '2024-02-01', total: 5, high: 2, medium: 2, low: 1 },
-            { period: '2024-03-01', total: 2, high: 0, medium: 1, low: 1 },
-            { period: '2024-04-01', total: 6, high: 2, medium: 3, low: 1 },
-            { period: '2024-05-01', total: 4, high: 1, medium: 2, low: 1 }
-        ];
+        // error message
+        const message = result.success
+            ? `No disruptions returned for this range${companyQuery ? ` for "${companyQuery}"` : ''}. Adjust your dates or try a different company.`
+            : 'Unable to reach the database right now. Please try again later.';
 
-        const headline = result.success
-            ? '<div class="trend-note">No disruptions returned for this range. Showing a demo trend so the panel is not empty.</div>'
-            : '<div class="trend-note error">Unable to reach the database right now. Showing a demo trend instead.</div>';
-
-        display.innerHTML = headline + renderDisruptionTrendChart(fallback);
+        display.innerHTML = `<div class="trend-note error">${message}</div>`;
     }
 
-    function renderDisruptionTrendChart(data) {
-        const width = 620;
-        const height = 260;
-        const padding = 45;
+// Disruption line plot
+function renderDisruptionTrendChart(data, options = {}) {
+        const containerWidth = Math.max(options.width || 620, 520);
+        const width = containerWidth;
+        const height = options.height || 320;
+        const padding = 55;
         const maxCount = Math.max.apply(null, data.map(item => item.total || 0).concat([1]));
 
         const xStep = (width - padding * 2) / Math.max(data.length - 1, 1);
@@ -948,45 +1087,111 @@ async function addNewCompany() {
             return path + `${command}${pt.x},${pt.y} `;
         }, '');
 
-        const areaPath = `${linePath}L${points[points.length - 1].x},${height - padding} L${points[0].x},${height - padding} Z`;
+        const areaPath = points.length > 1
+            ? `${linePath}L${points[points.length - 1].x},${height - padding} L${points[0].x},${height - padding} Z`
+            : `${linePath}L${points[0].x},${height - padding} Z`;
 
         const totalEvents = data.reduce((sum, row) => sum + (row.total || 0), 0);
-        const high = data.reduce((sum, row) => sum + (row.high || 0), 0);
-        const medium = data.reduce((sum, row) => sum + (row.medium || 0), 0);
-        const low = data.reduce((sum, row) => sum + (row.low || 0), 0);
 
         const axisTicks = data.map((item, idx) => {
             const dateLabel = item.period ? new Date(item.period).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '';
             const x = padding + idx * xStep;
             return `<g>
                         <line x1="${x}" y1="${height - padding}" x2="${x}" y2="${height - padding + 6}" stroke="#4b5563" />
-                        <text x="${x}" y="${height - padding + 20}" text-anchor="middle" fill="#9ca3af" font-size="10">${dateLabel}</text>
+                        <text x="${x}" y="${height - padding + 22}" text-anchor="middle" fill="#9ca3af" font-size="10">${dateLabel}</text>
                     </g>`;
         }).join('');
+
+        const companyNote = options.companyQuery
+            ? `<div class="trend-chip muted">Company Filter: ${options.companyQuery}</div>`
+            : '';
 
         return `
             <div class="trend-summary">
                 <div class="trend-chip total">
                     <div class="trend-value">${totalEvents}</div>
-                    <div class="trend-label">Total disruptions</div>
+                    <div class="trend-label">Avg Disruptions</div>
                 </div>
-                <div class="trend-chip high">High: ${high}</div>
-                <div class="trend-chip medium">Medium: ${medium}</div>
-                <div class="trend-chip low">Low: ${low}</div>
+                ${companyNote}
             </div>
-            <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" class="trend-chart">
-                <g>
-                    <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
-                    <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
-                    ${axisTicks}
-                </g>
-                <path d="${areaPath}" fill="rgba(59,130,246,0.15)" stroke="none"></path>
-                <path d="${linePath}" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
-                ${points.map(pt => `<circle cx="${pt.x}" cy="${pt.y}" r="4" fill="#8b5cf6" stroke="#c084fc" stroke-width="1.5"></circle>`).join('')}
-                ${points.map(pt => `<text x="${pt.x}" y="${pt.y - 10}" text-anchor="middle" fill="#e5e7eb" font-size="10">${Math.round((height - padding - pt.y) / yScale)}↑</text>`).join('')}
-            </svg>
+            <div class="trend-scroll">
+                <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet" class="trend-chart">
+                    <g>
+                        <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#4b5563" />
+                        <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#4b5563" />
+                        ${axisTicks}
+                    </g>
+                    <path d="${areaPath}" fill="rgba(59,130,246,0.15)" stroke="none"></path>
+                    <path d="${linePath}" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                    ${points.map(pt => `<circle cx="${pt.x}" cy="${pt.y}" r="4" fill="#8b5cf6" stroke="#c084fc" stroke-width="1.5"></circle>`).join('')}
+                    ${points.map(pt => `<text x="${pt.x}" y="${pt.y - 10}" text-anchor="middle" fill="#e5e7eb" font-size="10">${Math.round((height - padding - pt.y) / yScale)}↑</text>`).join('')}
+                </svg>
+            </div>
         `;
     }
+
+// nontrivial plot #2, criticality by region
+async function loadRegionalCriticality() {
+    const display = document.getElementById('regional-criticality-display');
+    if (!display) return;
+
+    display.innerHTML = '<div class="loading">Calculating regional criticality...</div>';
+
+    const result = await managerFetch('nontrivial_criticality_plot');
+
+    if (result.success && Array.isArray(result.data)) {
+        const regions = result.data
+            .map(item => ({
+                region: item.Region || 'Unknown',
+                score: Number(item.CriticalityScore || 0)
+            }))
+            .filter(item => item.score > 0)
+            .sort((a, b) => b.score - a.score);
+
+        if (regions.length === 0) {
+            display.innerHTML = '<p style="color:#9ca3af;">No regional criticality data available.</p>';
+            return;
+        }
+
+        const chartId = 'regional-criticality-chart';
+        const width = Math.max(340, regions.length * 110);
+
+        display.innerHTML = `
+            <div class="trend-scroll">
+                <div id="${chartId}" style="min-width:${width}px; height:340px;"></div>
+            </div>
+        `;
+
+        const maxY = Math.max(...regions.map(r => r.score)) + 100;
+
+        Plotly.newPlot(chartId, [
+            {
+                type: 'bar',
+                x: regions.map(r => r.region),
+                y: regions.map(r => r.score),
+                marker: {
+                    color: regions.map((_, idx) => idx === 0 ? '#f87171' : '#60a5fa'),
+                    line: { color: '#1f2937', width: 1 }
+                },
+                text: regions.map(r => Math.round(r.score)),
+                textposition: 'outside',
+                hovertemplate: '<b>%{x}</b><br>Criticality: %{y}<extra></extra>'
+            }
+        ], {
+            title: { text: 'Regional Vulnerability by Criticality', font: { size: 16, color: '#e5e7eb' } },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: { t: 30, r: 20, b: 70, l: 60 },
+            xaxis: { title: 'Region', tickfont: { color: '#e5e7eb' }, titlefont: { color: '#e5e7eb' } },
+            yaxis: { title: 'Criticality Score', tickfont: { color: '#e5e7eb' }, titlefont: { color: '#e5e7eb' }, rangemode: 'tozero', range: [0, maxY] },
+            height: 340
+        });
+        return;
+    }
+
+    const errorMsg = result && result.error ? result.error : 'Unable to load regional criticality.';
+    display.innerHTML = `<div class="trend-note error">${errorMsg}</div>`;
+}
 
 // Most critical companies function
 async function mostCriticalCompanies() {
@@ -1032,9 +1237,9 @@ async function mostCriticalCompanies() {
                     ">
 
                         <div style="flex: 1;">
-                            <strong>#${index + 1} ${company.CompanyName || 'Unknown'}</strong>
+                            <strong>${company.CompanyName || 'Unknown'}</strong>
                             <div style="font-size: 0.85em; color: #9ca3af; margin-top: 3px;">
-                                ${company.CompanyType || 'Unknown'}
+                                ${company.CompanyType || 'Unknown'} <div style="font-style: italic;">(ID ${company.CompanyID})</div>
                             </div>
                         </div>
 
@@ -1062,7 +1267,6 @@ async function mostCriticalCompanies() {
         display.innerHTML = '<div style="color: #ef4444;">Error loading critical companies</div>';
     }
 }
-
 
 // Network overview function
     async function getNetworkOverview() {
@@ -1205,6 +1409,132 @@ async function allDisruptionsForCompany() {
         }
     }
 
+
+// Companies affected by disruption event display
+async function companiesAffectedByEvent() {
+    const display = document.getElementById('event-companies-display');
+    if (!display) return;
+
+    const query = document.getElementById('event-company-search')?.value.trim() || "";
+
+    if (!query) {
+        display.innerHTML = '<p style="color: #9ca3af;">Enter an event name or event ID to search.</p>';
+        return;
+    }
+
+    const isEventId = /^\d+$/.test(query);
+    const eventID = isEventId ? parseInt(query, 10) : 0;
+
+    display.innerHTML = '<div class="loading">Loading companies affected by this event...</div>';
+
+    const result = await managerFetch('companies_by_event', {
+        eventID: isNaN(eventID) ? 0 : eventID,
+        eventName: isEventId ? '' : query
+    });
+
+    if (result.success && Array.isArray(result.data)) {
+        if (result.data.length === 0) {
+            display.innerHTML = '<p style="color: #9ca3af;">No companies found for this event. Try a different name or ID.</p>';
+            return;
+        }
+
+        let html = '<div style="max-height: 360px; overflow-y: auto;">';
+
+        result.data.forEach((company) => {
+            const impact = (company.ImpactLevel || '').toLowerCase();
+            const color = impact === 'high' ? '#ef4444' :
+                        impact === 'medium' ? '#f97316' :
+                        impact === 'low' ? '#22c55e' : '#8b5cf6';
+
+            html += '<div style="display:flex; align-items:center; padding:10px; margin-bottom:8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
+            html += '<div style="flex:1;">';
+            html += '<strong>' + (company.CompanyName || 'Unknown Company') + '<div style="font-style: italic; font-size: 0.85em;">' + ' (ID ' + (company.CompanyID || '') + ')</div>' + '</strong>';
+            html += '<div style="font-size: 0.85em; color: #9ca3af;">Event ID: ' + (company.EventID || 'N/A') + '</div>';
+            html += '<div style="font-size: 0.8em; color: #9ca3af;">Category: ' + (company.CategoryName || 'Unknown Category') + '</div>';
+            html += '</div>';
+            html += '<div style="text-align: center; padding: 0 10px;">';
+            html += '<div style="font-size: 1.1em; font-weight: bold; color: ' + color + '; text-transform: capitalize;">';
+            html += (company.ImpactLevel || 'Unknown');
+            html += '</div>';
+            html += '<div style="font-size: 0.75em; color: ' + color + ';">Impact</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+
+        html += '</div>';
+        display.innerHTML = html;
+    } else {
+        display.innerHTML = '<div style="color: #ef4444;">Error loading companies affected by this event.</div>';
+    }
+}
+
+// Distributor average delay display
+async function loadDistributorDelays() {
+    const display = document.getElementById('distributor-delay-display');
+    if (!display) return;
+
+    const search = document.getElementById('distributor-delay-search')?.value.trim() || "";
+    display.innerHTML = '<div class="loading">Loading distributor delays...</div>';
+
+    const result = await managerFetch('distributors_by_delay', { search });
+
+    if (!result.success || !Array.isArray(result.data)) {
+        display.innerHTML = '<div style="color: #ef4444;">Unable to load distributor delays.</div>';
+        return;
+    }
+
+    let rows = [...result.data];
+    const isNumericSearch = /^\d+$/.test(search);
+    if (search) {
+        const searchLower = search.toLowerCase();
+        rows = rows.filter(row => {
+            if (isNumericSearch) {
+                return String(row.CompanyID) === search;
+            }
+            return (row.CompanyName || '').toLowerCase().includes(searchLower);
+        });
+    }
+
+    if (rows.length === 0) {
+        display.innerHTML = '<p style="color:#9ca3af;">No distributors found by that name or ID.</p>';
+        return;
+    }
+
+    rows.sort((a, b) => (Number(b.AvgDelayDays) || 0) - (Number(a.AvgDelayDays) || 0));
+
+    let html = '<div style="max-height: 360px; overflow-y: auto;">';
+    rows.forEach((row, idx) => {
+        const delay = Number(row.AvgDelayDays);
+        const delayVal = Number.isFinite(delay) ? delay.toFixed(2) : 'N/A';
+        const color = Number.isFinite(delay)
+            ? (delay > 5 ? '#ef4444' : delay > 2 ? '#f97316' : '#22c55e')
+            : '#8b5cf6';
+
+        html += '<div style="display: flex; align-items: center; padding: 10px; margin-bottom: 8px; background: rgba(31, 41, 55, 0.5); border-radius: 8px; border-left: 4px solid ' + color + ';">';
+        html += '<div style="flex: 1;">';
+        html += '<strong>' + (row.CompanyName || 'Unknown Distributor') + '</strong>';
+        html += '<strong>' + '<div style="font-size: 0.85em; font-style: italic;">(ID ' + (row.CompanyID || 'N/A') + ')'+ '</div>' + '</strong>';
+        html += '</div>';
+        html += '<div style="text-align: center; padding: 0 10px;">';
+        html += '<div style="font-size: 1.2em; font-weight: bold; color: ' + color + ';">' + delayVal + ' Days' + '</div>';
+        html += '<div style="font-size: 0.75em; color: ' + color + ';">Avg Delay</div>';
+        html += '</div>';
+        html += '</div>';
+    });
+    html += '</div>';
+
+    display.innerHTML = html;
+}
+
+window.addEventListener('DOMContentLoaded', function () {
+    if (document.getElementById('distributor-delay-display')) {
+        setTimeout(loadDistributorDelays, 500);
+    }
+    if (document.getElementById('nontrivial-plot-1')) {
+        setTimeout(loadDistributorShipmentPlot, 600);
+    }
+});
+
 </script>
 
 
@@ -1224,26 +1554,17 @@ async function allDisruptionsForCompany() {
             </nav>
         </header>
 
-            <section class="grid">
-        <div class="panel">
-        <h2>Company Info</h2>
-        <div class="company-search" style="background: transparent; padding: 10px 0;">
-            <div class="company-search-box">
-                <input 
-                    type="text" 
-                    id="company-name" 
-                    placeholder="Enter company name..."
-                >
-                <button 
-                    onclick="companyInfoSearch()" 
-                    class="btn-company-search"
-                >
-                    Search
-                </button>
+        <section class="grid">
+            <div class="panel">
+                <h2>Company Info</h2>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="company-search" placeholder="Enter company name...">
+                        <button onclick="searchCompany()" class="btn-company-search">Search</button>
+                    </div>
+                    <div id="company-results"></div>
+                </div>
             </div>
-            <div id="results"></div>
-        </div>
-    </div>
 
             <div class="panel">
                 <h2>Key KPIs</h2>
@@ -1432,6 +1753,8 @@ document.addEventListener('DOMContentLoaded', () => {
     disruptionFrequencyByCompany();
     topDistributorsByVolume();
     mostCriticalCompanies();
+    regionalDisruptions();
+    loadRegionalCriticality();
 });
 </script>
 
@@ -1728,224 +2051,4 @@ async function alertsOngoingDisruptions() {
         display.innerHTML = '<div style="color: #ef4444;">Error loading alerts.</div>';
     }
 }
-
-    // Company info search bar supply manager
-async function companyInfoSearch() {
-
-    const companyName = document.getElementById("company-name").value;
-    const resultsDiv  = document.getElementById("results");
-
-    resultsDiv.innerHTML = "Loading Requested Info...";
-
-    const result = await supplyManagerFetch('companyInfoSearch', {
-        companyName: companyName,
-        startDate: '2020-01-01',
-        endDate: '2025-12-31'
-    });
-
-    if (!result.success) {
-        resultsDiv.innerHTML = "Company not found.";
-        return;
-    }
-
-    const c = result.companyInfo[0];
-    let html = `<h2>${c.CompanyName}</h2>`;
-
-    
-    html += `
-        <p><strong>Type:</strong> ${c.CompanyType}</p>
-        <p><strong>Tier Level:</strong> ${c.TierLevel}</p>
-    `;
-
-    
-    if (result.address?.length) {
-        const a = result.address[0];
-        html += `
-            <h3>Address</h3>
-            <p>${a.AddressLine1 ?? ''} ${a.City}, ${a.CountryName}</p>
-        `;
-    }
-
-    html += `<h3>Dependencies</h3><ul>`;
-    result.dependencies.forEach(d => {
-        if (d.UpstreamCompanyName)
-            html += `<li>Depends on: ${d.UpstreamCompanyName}</li>`;
-        if (d.DownstreamCompanyName)
-            html += `<li>Depended on by: ${d.DownstreamCompanyName}</li>`;
-    });
-    html += `</ul>`;
-
-    
-    if (result.latestFinancial?.length) {
-        const f = result.latestFinancial[0];
-        html += `
-            <h3>Latest Financial Status</h3>
-            <p>Year: ${f.RepYear}, Quarter: ${f.Quarter}</p>
-            <p>Revenue: ${f.Revenue}</p>
-            <p>Profit: ${f.NetProfit}</p>
-        `;
-    }
-
-   
-    if (result.manufacturerCapacity?.length) {
-        html += `
-            <h3>Manufacturing Capacity</h3>
-            <p>${result.manufacturerCapacity[0].FactoryCapacity}</p>
-        `;
-    }
-
-    if (result.uniqueRoutes?.length) {
-        html += `
-            <h3>Distribution Routes</h3>
-            <p>Unique Routes: ${result.uniqueRoutes[0].UniqueRoutes}</p>
-        `;
-    }
-
-   
-    if (result.productsSupplied?.length) {
-        html += `<h3>Products Supplied</h3><ul>`;
-        result.productsSupplied.forEach(p => {
-            html += `<li>${p.ProductName} (Price: ${p.SupplyPrice})</li>`;
-        });
-        html += `</ul>`;
-        html += `<p><strong>Product Diversity:</strong> ${result.productsSupplied.length}</p>`;
-    }
-
-    
-    html += renderTransactions("Shipping", result.data?.shippingTransactions);
-    html += renderTransactions("Receiving", result.data?.receivingTransactions);
-    html += renderTransactions("Adjustments", result.data?.adjustmentTransactions);
-
-    
-    if (result.kpis) {
-        html += `
-            <h3>Key Performance Indicators</h3>
-            <ul>
-                <li>On-Time Delivery Rate: ${result.kpis.onTimeRate}%</li>
-                <li>Average Delay: ${result.kpis.avgDelay} days</li>
-                <li>Delay Std Dev: ${result.kpis.stdDelay} days</li>
-                <li>Financial Health (Past Year): ${result.kpis.financialHealth}</li>
-            </ul>
-        `;
-    }
-
-   
-    if (result.disruptions) {
-        html += `
-            <h3>Disruption Events (Past Year)</h3>
-            <p>Total Events: ${result.disruptions.total}</p>
-            <ul>
-        `;
-        result.disruptions.events.forEach(e => {
-            html += `
-                <li>${e.EventDate} – ${e.EventType}: ${e.Description}</li>
-            `;
-        });
-        html += `</ul>`;
-    }
-
-    
-    html += `
-        <button onclick="editCompany('${c.CompanyID}')">Edit Company Info</button>
-        <button onclick="saveCompany('${c.CompanyID}')">Save Changes</button>
-    `;
-
-    resultsDiv.innerHTML = html;
-}
-
-
-function renderTransactions(title, txs = []) {
-    if (!txs || txs.length === 0)
-        return `<h3>${title} Transactions</h3><p>No records</p>`;
-
-    let html = `<h3>${title} Transactions</h3><table border="1">
-        <tr>
-            <th>ID</th>
-            <th>Product</th>
-            <th>Qty</th>
-            <th>Date</th>
-        </tr>`;
-
-    txs.forEach(t => {
-        html += `
-            <tr>
-                <td>${t.TransactionID}</td>
-                <td>${t.ProductName}</td>
-                <td>${t.Quantity}</td>
-                <td>${t.TransactionDate}</td>
-            </tr>
-        `;
-    });
-
-    return html + `</table>`;
-}
-async function companiesAffectedByDisruption() {
-    const display = document.getElementById('affected-companies-display');
-    if (!display) return;
-
-    const searchValue = document.getElementById('disruption-search')?.value.trim() || "";
-
-    display.innerHTML = '<div class="loading">Analyzing disruption impact on companies...</div>';
-
-    const result = await managerFetch('companies_by_event', {
-        eventID: searchValue
-    });
-
-    if (!result.success || !Array.isArray(result.data)) {
-        display.innerHTML = '<div style="color: #ef4444;">Error loading affected companies.</div>';
-        return;
-    }
-
-    const rows = result.data;
-    let html = '<div style="max-height: 360px; overflow-y: auto;">';
-
-    if (rows.length === 0) {
-        html += '<p style="color:#9ca3af;">No companies found affected by this disruption.</p>';
-        html += '</div>';
-        display.innerHTML = html;
-        return;
-    }
-
-    rows.slice(0, 10).forEach(company => {
-        const level = (company.ImpactLevel || "").toLowerCase();
-
-        const color =
-            level === "high" ? "#ef4444" :
-            level === "medium" ? "#f97316" :
-            level === "low" ? "#22c55e" : "#6b7280";
-
-        html += `
-            <div style="
-                display: flex;
-                align-items: center;
-                padding: 10px;
-                margin-bottom: 8px;
-                background: rgba(31,41,55,0.5);
-                border-radius: 8px;
-                border-left: 4px solid ${color};
-            ">
-                <div style="flex:1;">
-                    <strong>${company.CompanyName || "Unknown"}</strong>
-                </div>
-                <div style="text-align:center; padding:0 10px;">
-                    <div style="font-size:1.2em; font-weight:bold; color:${color}; text-transform:capitalize;">
-                        ${company.ImpactLevel}
-                    </div>
-                    <div style="font-size:0.75em; color:${color};">Impact Level</div>
-                </div>
-            </div>
-        `;
-    });
-
-    if (rows.length > 10) {
-        html += `<p style="color:#9ca3af; margin-top:10px; font-size:0.85em;">
-            Showing top 10 results. Enter an event ID for full details.
-        </p>`;
-    }
-
-    html += '</div>';
-    display.innerHTML = html;
-}
-
-    
 </script>
