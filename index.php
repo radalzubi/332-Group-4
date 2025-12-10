@@ -60,6 +60,10 @@ if ($page === 'scm' && $role !== 'scm') {
     header("Location: index.php?page=login");
     exit();
 }
+if ($page === 'company_search' && $role !== 'scm') {
+    header("Location: index.php?page=login");
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -225,7 +229,61 @@ if ($page === 'scm' && $role !== 'scm') {
             border: 1px solid #374151;
             margin-top: 10px;
         }
-        
+
+        .company-card .panel-subtitle {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            margin-top: 0;
+        }
+
+        .company-results-grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 1.15fr) minmax(320px, 1fr);
+            grid-template-areas:
+                "left transactions";
+            gap: 15px;
+            align-items: start;
+            margin-top: 10px;
+        }
+
+        .company-left-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            grid-area: left;
+        }
+
+        .company-card.transactions { grid-area: transactions; }
+
+        @media (max-width: 900px) {
+            .company-results-grid {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "left"
+                    "transactions";
+            }
+        }
+
+        .company-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 10px 16px;
+        }
+
+        .company-dependency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px 18px;
+            margin-top: 10px;
+        }
+
+        .transaction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px 16px;
+            margin-top: 12px;
+        }
+
         .company-card h3 {
             color: #60a5fa;
             margin: 0 0 10px 0;
@@ -247,17 +305,87 @@ if ($page === 'scm' && $role !== 'scm') {
             font-weight: 500;
         }
 
+        .update-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .inline-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 8px;
+        }
+
+        .update-form label {
+            color: #d1d5db;
+            font-size: 0.85rem;
+        }
+
+        .update-form input,
+        .update-form textarea,
+        .update-form select {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e5e7eb;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 0.9rem;
+        }
+
+        .update-form textarea {
+            min-height: 72px;
+            resize: vertical;
+        }
+
+        .btn-save {
+            align-self: flex-start;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #22c55e, #14b8a6);
+            color: #052e16;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(34, 197, 94, 0.35);
+        }
+
+        .save-status {
+            font-size: 0.85rem;
+            color: #34d399;
+            margin: 4px 0 0;
+        }
+
         .alerts-container {
-            max-height: 400px;
-            overflow-y: auto;
+            display: flex;
+            gap: 12px;
+            padding: 4px 2px 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            align-items: stretch;
         }
         
         .alerts-item {
+            flex: 0 0 auto;
+            min-width: 260px;
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            gap: 8px;
             padding: 12px;
             border-radius: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             animation: slideIn 0.3s ease-out;
         }
         
@@ -290,6 +418,106 @@ if ($page === 'scm' && $role !== 'scm') {
         .distributor-search-box input {
             width: 100%;
             max-width: 200px;
+        }
+
+        .tx-panel {
+            background: rgba(31, 41, 55, 0.7);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 14px;
+        }
+
+        .tx-filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tx-filters label {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .tx-filters input {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e5e7eb;
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .tx-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .tx-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin: 12px 0;
+        }
+
+        .tx-card {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .tx-card h4 {
+            margin: 0 0 6px;
+            color: #a5b4fc;
+            font-size: 1rem;
+        }
+
+        .tx-card ul {
+            margin: 0;
+            padding-left: 18px;
+            color: #e5e7eb;
+        }
+
+        .tx-card .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .tx-card .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .tx-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .tx-pill {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            color: #0b1220;
+            margin-right: 6px;
+        }
+
+        .tx-pill.success { background: #34d399; }
+        .tx-pill.warn { background: #fbbf24; }
+        .tx-pill.info { background: #60a5fa; }
+
+        .tx-section-title {
+            margin: 14px 0 6px;
+            color: #cbd5e1;
         }
 
     </style>
@@ -1533,6 +1761,9 @@ window.addEventListener('DOMContentLoaded', function () {
     if (document.getElementById('nontrivial-plot-1')) {
         setTimeout(loadDistributorShipmentPlot, 600);
     }
+    if (document.getElementById('alerts-container')) {
+        setTimeout(alertsOngoingDisruptions, 400);
+    }
 });
 
 </script>
@@ -1550,46 +1781,37 @@ window.addEventListener('DOMContentLoaded', function () {
                 <p class="app-subtitle">Company info, KPIs, and various metrics.</p>
             </div>
             <nav class="top-nav">
+                <a href="index.php?page=company_search" class="nav-link">Company Info Search</a>
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
             </nav>
         </header>
 
         <section class="grid">
-            <div class="panel">
-                <h2>Company Info</h2>
-                <div class="company-search" style="background: transparent; padding: 10px 0;">
-                    <div class="company-search-box">
-                        <input type="text" id="company-search" placeholder="Enter company name or ID for general info">
-                        <button onclick="searchCompany()" class="btn-company-search">Search</button>
-                    </div>
-                    <div id="company-results"></div>
-                </div>
-            </div>
-
-            <div class="panel">
-                <h2>Key KPIs</h2>
-                <div class="kpi-section">
-                    <div class="date-range-controls">
-                        <label>From:</label>
-                        <input type="date" id="kpi-start-date" value="2020-01-01">
-                        <label>To:</label>
-                        <input type="date" id="kpi-end-date" value="2025-12-31">
-                        <button onclick="loadKPIs()" class="btn-load">Load KPIs</button>
-                    </div>
-                    <div id="kpi-display"></div>
-                </div>
-            </div>
-
+            <div class="panel-wide" style="padding: 10px; background: #1f2937; color: #ffffff; border-radius: 8px; max-width: 100%; margin: 0 0 20px;">
+                <h2 style="margin-bottom: 10px;">Alerts</h2>
+                <button onclick="alertsOngoingDisruptions()" class="btn" style="margin-bottom: 10px;
+                 padding: 8px 16px; background-color: #3b82f6; color: #fff; border: none; border-radius: 6px; cursor: pointer">Reload</button>
+                <div id="alerts-container" class="alerts-container" style="
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 6px;
+            min-height: 80px;
+    "></div></div>
     <!-- Disruption Metrics panel -->
         <div class="panel-wide">
             <h2>Disruption Metrics</h2>
             <p>HDR, ART, TD, DF</p>
 
-            <div id="charts-disruptions" style="padding: 20px;"> 
+            <div id="charts-disruptions" style="padding: 20px;">
                 <div class="disruptions-123">
                     <div class="charts-123"><div id="chart-1"></div></div>
                     <div class="charts-123"><div id="art-histogram"></div></div>
                     <div class="charts-123"><div id="td-histogram"></div></div>
+                    <div class="charts-123">
+                        <div style="width: 100%; display: flex; justify-content: center;">
+                            <canvas id="severityChart" width="200" height="300"></canvas>
+                        </div>
+                    </div>
                  </div>
 
                 <div class="disruptions-4">
@@ -1598,52 +1820,86 @@ window.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
         </div>
+        <div class="panel-wide">
+            <h2>Transaction Explorer</h2>
+            <p style="color: #9ca3af;">Review shipments, receipts, and adjustments by time window, geography, and counterparties.</p>
 
-            <div class="panel" style="padding: 10px; background: #1f2937; color: #ffffff; border-radius: 8px; max-width: 600px; margin: 20px auto;">
-                <h2 style="margin-bottom: 10px;">Alerts</h2>
-                <button onclick="alertsOngoingDisruptions()" class="btn" style="margin-bottom: 10px;
-                 padding: 8px 16px;
-                 background-color: #3b82f6;
-                color: #fff;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer">
-                    Refresh Alerts
-                    </button>
-                <div id="alerts-container" class="alerts-container" style="
-            background: rgba(255,255,255,0.05);
-            padding: 10px;
-            border-radius: 6px;
-            min-height: 80px;
-    "></div></div>
-
-            <div class="panel">
-                <h2>Regional Risk Concentration<h2>
-                <p></p>
-                <div class="company-search" style="background: transparent; padding: 10px 0;">
-                <input type="text" id="heatmap-location-id" placeholder="Enter Location ID (optional)">
-                <button onclick="rrcHeatmap()" class="btn-load">Load Heatmap</button>
-            </div>
-
-                <div id="rrc-heatmap-display" style="margin-top: 15px;">
-                    <div class="loading">Click "Load Heatmap" to see data.</div>
+            <div class="tx-panel">
+                <div class="tx-filters">
+                    <div>
+                        <label for="tx-start-date">Start date</label>
+                        <input type="date" id="tx-start-date" value="2020-01-01">
+                    </div>
+                    <div>
+                        <label for="tx-end-date">End date</label>
+                        <input type="date" id="tx-end-date" value="2025-12-31">
+                    </div>
+                    <div>
+                        <label for="tx-location">Location filter</label>
+                        <input type="text" id="tx-location" placeholder="City, country, or continent">
+                    </div>
+                    <div>
+                        <label for="tx-source">Leaving company</label>
+                        <input type="text" id="tx-source" placeholder="Source company name">
+                    </div>
+                    <div>
+                        <label for="tx-destination">Arriving company</label>
+                        <input type="text" id="tx-destination" placeholder="Destination company name">
+                    </div>
+                    <div>
+                        <label for="tx-distributor">Distributor (for KPIs)</label>
+                        <input type="text" id="tx-distributor" placeholder="Distributor name">
+                    </div>
+                </div>
+                <div class="tx-actions">
+                    <button class="btn-load" onclick="loadTransactionsExplorer()">Run transaction query</button>
+                    <span style="color: #9ca3af; font-size: 0.9rem;">Distributor field unlocks shipment volume, on-time rates, and exposure.</span>
                 </div>
             </div>
 
-            <div class="panel">
-                <h2>Severity Distribution</h2>
-                <p>Low/Medium/High stacked chart</p>
-                <div style="magin-top: 20px;">
-                    <canvas id="severityChart" width="200" height="400"></canvas>
-                </div>
-
-                <button onclick="loadSeverityStackedBar()" class="btn-load severity-btn">
-                    Load Severity Distribution
-                </button>
+            <div id="transaction-results" class="tx-panel" style="margin-top: 12px;">
+                <div class="loading">Use the filters above to load transaction activity.</div>
             </div>
+        </div>
         </section>
     </div>
 </div>
+
+<?php elseif ($page === 'company_search' && $role === 'scm'): ?>
+
+    <!-- COMPANY SEARCH PAGE FOR SUPPLY CHAIN MANAGER -->
+    <div class="card wide">
+        <header class="card-header horizontal">
+            <div>
+                <h1 class="app-title">Company Info Search</h1>
+                <p class="app-subtitle">Search for specific company details</p>
+            </div>
+            <nav class="top-nav">
+                <a href="index.php?page=scm" class="nav-link">Return</a>
+                <a href="index.php?page=logout" class="nav-link logout">Logout</a>
+            </nav>
+        </header>
+
+        <section class="grid">
+            <div class="panel-wide">
+                <h2>Company Info</h2>
+                <div class="company-search" style="background: transparent; padding: 10px 0;">
+                    <div class="company-search-box">
+                        <input type="text" id="company-search" placeholder="Enter company name or ID">
+                        <button onclick="searchCompany()" class="btn-company-search">Search</button>
+                    </div>
+                    <div class="date-range-controls" style="margin-top: 10px;">
+                        <label for="company-start-date">From:</label>
+                        <input type="date" id="company-start-date" value="2020-01-01">
+                        <label for="company-end-date">To:</label>
+                        <input type="date" id="company-end-date" value="2025-12-31">
+                        <span style="color: #9ca3af; font-size: 0.85rem;">Transaction history date specification<span>
+                    </div>
+                    <div id="company-results"></div>
+                </div>
+            </div>
+        </section>
+    </div>
 
 <?php else: ?>
 
@@ -1751,10 +2007,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHighImpactDisruptions();
     loadAverageRecoveryTimes();
     disruptionFrequencyByCompany();
+    loadSeverityStackedBar();
     topDistributorsByVolume();
     mostCriticalCompanies();
     regionalDisruptions();
     loadRegionalCriticality();
+    alertsOngoingDisruptions();
 });
 </script>
 
@@ -1993,58 +2251,34 @@ async function alertsOngoingDisruptions() {
     if (result.success && result.data && Array.isArray(result.data.ongoingAlerts)) {
         const alerts = result.data.ongoingAlerts;
 
-        let html = '<div style="max-height: 360px; overflow-y: auto;">';
+        let html = '';
 
         if (alerts.length === 0) {
             html += '<p style="color: #9ca3af;">No ongoing alerts at this time.</p>';
         } else {
-            alerts.slice(0, 10).forEach(alert => {
+            alerts.forEach(alert => {
                 const startDate = alert.StartDate ? new Date(alert.StartDate) : null;
                 const daysAgo = startDate
                     ? Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24))
                     : null;
 
-                const color =
-                      daysAgo <= 2  ? '#ef4444'
-                    : daysAgo <= 7  ? '#f97316'
-                    : daysAgo <= 30 ? '#eab308'
-                                    : '#22c55e';
+                const severityClass =
+                      daysAgo !== null && daysAgo <= 2  ? 'alert-high'
+                    : daysAgo !== null && daysAgo <= 7  ? 'alert-medium'
+                    : 'alert-low';
 
                 html += `
-                    <div style="
-                        display: flex;
-                        align-items: center;
-                        padding: 10px;
-                        margin-bottom: 8px;
-                        background: rgba(31, 41, 55, 0.5);
-                        border-radius: 8px;
-                        border-left: 4px solid ${color};
-                    ">
-                        <div style="flex: 1;">
+                    <div class="alerts-item ${severityClass}">
+                        <div style="display: flex; justify-content: space-between; gap: 10px; align-items: baseline;">
                             <strong>${alert.CompanyName || 'Unknown Company'}</strong>
-                            <div style="font-size: 0.85em; color: #9ca3af;">Event ID: ${alert.EventID}</div>
-                            <div style="font-size: 0.85em; color: #9ca3af;">Category: ${alert.CategoryName}</div>
+                            <span style="font-size: 0.85em; color: #e5e7eb;">${startDate ? startDate.toLocaleDateString() : 'Unknown Date'}</span>
                         </div>
-
-                        <div style="text-align: center; padding: 0 10px;">
-                            <div style="font-size: 1em; font-weight: bold; color: ${color};">
-                                ${startDate ? startDate.toLocaleDateString() : 'Unknown Date'}
-                            </div>
-                            <div style="font-size: 0.75em; color: ${color};">Started</div>
-                        </div>
+                        <div style="font-size: 0.9em; color: #d1d5db;">Event ID: ${alert.EventID}</div>
+                        <div style="font-size: 0.9em; color: #d1d5db;">Category: ${alert.CategoryName}</div>
                     </div>
                 `;
             });
         }
-
-        if (alerts.length > 10) {
-            html += `
-                <p style="color:#9ca3af; margin-top:10px; font-size:0.85em; font-style: italic;">
-                    Showing only the 10 most recent alerts. More alerts exist.
-                </p>`;
-        }
-
-        html += '</div>';
         display.innerHTML = html;
 
     } else {
