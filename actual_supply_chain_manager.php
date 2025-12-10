@@ -70,13 +70,26 @@ function companyInfoSearch($conn) {
     'data' => [] ];
 
 
-    $companyName = isset($_POST['companyName']) ? $conn->real_escape_string($_POST['companyName']) : '';
+    $identifier = isset($_POST['companyName']) ? trim($_POST['companyName']) : '';
+    $companyName = $conn->real_escape_string($identifier);
     $startDate   = isset($_POST['startDate']) ? $conn->real_escape_string($_POST['startDate']) : '1000-01-01';
     $endDate     = isset($_POST['endDate'])   ? $conn->real_escape_string($_POST['endDate'])   : date('Y-m-d');
 
+    if ($identifier === '') {
+        echo json_encode([
+            'success' => false,
+            'error' => 'No company provided'
+        ]);
+        return;
+    }
+
+    $companyWhere = is_numeric($identifier)
+        ? "c.CompanyID='$companyName'"
+        : "c.CompanyName='$companyName'";
+
 
     // 1. Basic company info
-    $sql = "SELECT * FROM Company WHERE CompanyName='$companyName'";
+    $sql = "SELECT * FROM Company c WHERE $companyWhere";
     $result = $conn->query($sql);
     $response['companyInfo'] = $result ? fetchAll($result) : [];
 
@@ -86,7 +99,7 @@ function companyInfoSearch($conn) {
     SELECT c.CompanyID, c.CompanyName, l.City, l.CountryName, l.ContinentName
     FROM Company c
     JOIN Location l ON c.LocationID = l.LocationID
-    WHERE c.CompanyName='$companyName'
+    WHERE $companyWhere
     ";
     $result = $conn->query($sql);
     $response['address'] = $result ? fetchAll($result) : [];
@@ -105,7 +118,7 @@ function companyInfoSearch($conn) {
     LEFT JOIN Company depUp ON d1.UpstreamCompanyID = depUp.CompanyID
     LEFT JOIN DependsOn d2 ON c.CompanyID = d2.UpstreamCompanyID
     LEFT JOIN Company depDown ON d2.DownstreamCompanyID = depDown.CompanyID
-    WHERE c.CompanyName='$companyName'
+    WHERE $companyWhere
     ";
     $result = $conn->query($sql);
     $response['dependencies'] = $result ? fetchAll($result) : [];
@@ -116,7 +129,7 @@ function companyInfoSearch($conn) {
     SELECT f.*
     FROM FinancialReport f
     JOIN Company c ON f.CompanyID = c.CompanyID
-    WHERE c.CompanyName='$companyName'
+    WHERE $companyWhere
     ORDER BY f.RepYear DESC, FIELD(f.Quarter,'Q4','Q3','Q2','Q1') DESC
     LIMIT 1
     ";
@@ -129,7 +142,7 @@ function companyInfoSearch($conn) {
     SELECT c.CompanyName, m.FactoryCapacity
     FROM Company c
     JOIN Manufacturer m ON c.CompanyID = m.CompanyID
-    WHERE c.CompanyName='$companyName'
+    WHERE $companyWhere
     ";
     $result = $conn->query($sql);
     $response['manufacturerCapacity'] = $result ? fetchAll($result) : [];
@@ -142,7 +155,7 @@ function companyInfoSearch($conn) {
     FROM Company c
     JOIN Distributor d ON c.CompanyID = d.CompanyID
     JOIN Shipping s ON d.CompanyID = s.DistributorID
-    WHERE c.CompanyName='$companyName'
+    WHERE $companyWhere
     GROUP BY c.CompanyName
     ";
     $result = $conn->query($sql);
@@ -155,7 +168,7 @@ function companyInfoSearch($conn) {
     FROM SuppliesProduct sp
     JOIN Product p ON sp.ProductID = p.ProductID
     JOIN Company c ON sp.SupplierID = c.CompanyID
-    WHERE c.CompanyName='$companyName'
+    WHERE $companyWhere
     ";
     $result = $conn->query($sql);
     $response['productsSupplied'] = $result ? fetchAll($result) : [];
@@ -177,7 +190,7 @@ $sql = "SELECT
         JOIN Product p ON s.ProductID = p.ProductID
         JOIN Company c 
             ON (s.SourceCompanyID = c.CompanyID OR s.DestinationCompanyID = c.CompanyID)
-        WHERE c.CompanyName = '$companyName'
+        WHERE $companyWhere
           AND s.ActualDate BETWEEN '$startDate' AND '$endDate'
         ORDER BY s.ActualDate DESC";
 
@@ -201,7 +214,7 @@ $sql = "SELECT
         JOIN Shipping s ON r.ShipmentID = s.ShipmentID
         JOIN Product p ON s.ProductID = p.ProductID
         JOIN Company c ON r.ReceiverCompanyID = c.CompanyID
-        WHERE c.CompanyName = '$companyName'
+        WHERE $companyWhere
           AND r.ReceivedDate BETWEEN '$startDate' AND '$endDate'
         ORDER BY r.ReceivedDate DESC";
 
