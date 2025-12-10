@@ -1547,7 +1547,7 @@ window.addEventListener('DOMContentLoaded', function () {
         <header class="card-header horizontal">
             <div>
                 <h1 class="app-title">Supply Chain Manager Dashboard</h1>
-                <p class="app-subtitle">Company info, KPIs, and disruption metrics.</p>
+                <p class="app-subtitle">Company info, KPIs, and various metrics.</p>
             </div>
             <nav class="top-nav">
                 <a href="index.php?page=logout" class="nav-link logout">Logout</a>
@@ -1559,7 +1559,7 @@ window.addEventListener('DOMContentLoaded', function () {
                 <h2>Company Info</h2>
                 <div class="company-search" style="background: transparent; padding: 10px 0;">
                     <div class="company-search-box">
-                        <input type="text" id="company-search" placeholder="Enter company name...">
+                        <input type="text" id="company-search" placeholder="Enter company name or ID for general info">
                         <button onclick="searchCompany()" class="btn-company-search">Search</button>
                     </div>
                     <div id="company-results"></div>
