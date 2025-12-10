@@ -24,13 +24,13 @@ if ($page === 'do_login') {
     $password = isset($_POST['password']) ? trim($_POST['password']) : '';
 
     // USERNAMES & PASSWORDS
-    if ($username === 'manager' && $password === '123') {
+    if ($username === 'managerL?P35!' && $password === '91649cbwoy24?@') {
         $_SESSION['role'] = 'senior';
         $_SESSION['username'] = 'manager';
         header("Location: index.php?page=erp");
         exit();
     }
-    if ($username === 'supply' && $password === '123') {
+    if ($username === 'supply64198!' && $password === '3kfehTrwE2@s') {
         $_SESSION['role'] = 'scm';
         $_SESSION['username'] = 'supply';
         header("Location: index.php?page=scm");
