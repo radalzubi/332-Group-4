@@ -76,6 +76,8 @@ The database schema and seed data are **not included** in this repo, so you need
 4. From the repo root, start a PHP server with those variables set: `DB_HOST=127.0.0.1 DB_USER=... DB_PASSWORD=... DB_NAME=... php -S localhost:8000`
 5. Open `http://localhost:8000/index.php`. The page loads Chart.js and Plotly from CDNs, so it needs internet access.
 
+CI (`.github/workflows/ci.yml`) runs `php -l` on every PHP file and `node --check` on `script.js`. It also starts the built-in server with no database and checks that the login page renders and that both handlers return a JSON error.
+
 Login uses one demo account per role, defined in `index.php`. That suits a course demo; a production deployment would add real user management.
 
 ## Team
