@@ -1,4 +1,3 @@
-
 <?php
 date_default_timezone_set('America/New_York');
 ini_set('display_errors', 1);
