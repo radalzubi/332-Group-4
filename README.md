@@ -61,6 +61,7 @@ The SQL references these tables (the schema itself is not in this repo): `Compan
 | `style.css` | Styling |
 | `ajax_handler_senior_managers.php` | JSON API for the senior manager dashboard |
 | `ajax_handler_supply_chain_managers.php` | JSON API for the supply chain manager dashboard |
+| `config.php` | Shared MySQL connection, configured from `DB_*` environment variables |
 | `legacy/` | Earlier handler versions and a fake-data debug stub, kept for reference; not used by the front end |
 | `Senior Manager Module SQL Queries - Natalie`, `Supply Chain Module SQL Queries - Natalie` | Stored-procedure versions of the module queries |
 | `A3 Documentation.txt` | Short team progress log and notes |
@@ -71,8 +72,8 @@ The database schema and seed data are **not included** in this repo, so you need
 
 1. Install PHP (with the `mysqli` extension) and MySQL.
 2. Create a database and load a schema matching the tables above.
-3. Update the MySQL connection settings, which are set near the top of `index.php`, `ajax_handler_senior_managers.php` and `ajax_handler_supply_chain_managers.php`, to point at your own database.
-4. From the repo root, start a PHP server: `php -S localhost:8000`
+3. Point the app at your database with the `DB_HOST`, `DB_USER`, `DB_PASSWORD` and `DB_NAME` environment variables, which `config.php` reads. Without them it falls back to placeholder values.
+4. From the repo root, start a PHP server with those variables set: `DB_HOST=127.0.0.1 DB_USER=... DB_PASSWORD=... DB_NAME=... php -S localhost:8000`
 5. Open `http://localhost:8000/index.php`. The page loads Chart.js and Plotly from CDNs, so it needs internet access.
 
 Login uses one demo account per role, defined in `index.php`. That suits a course demo; a production deployment would add real user management.
