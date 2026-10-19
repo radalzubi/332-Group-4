@@ -61,8 +61,7 @@ The SQL references these tables (the schema itself is not in this repo): `Compan
 | `style.css` | Styling |
 | `ajax_handler_senior_managers.php` | JSON API for the senior manager dashboard |
 | `ajax_handler_supply_chain_managers.php` | JSON API for the supply chain manager dashboard |
-| `ajax_handler.php` | Early debug stub that returns fake data without a database |
-| `CORRECT_ajax_handler_supply_chain_managers.php`, `NULL_ajax_handler_senior_manager.php` | Earlier handler versions kept for reference; not used by the front end |
+| `legacy/` | Earlier handler versions and a fake-data debug stub, kept for reference; not used by the front end |
 | `Senior Manager Module SQL Queries - Natalie`, `Supply Chain Module SQL Queries - Natalie` | Stored-procedure versions of the module queries |
 | `A3 Documentation.txt` | Short team progress log and notes |
 
