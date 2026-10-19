@@ -2,12 +2,8 @@
 
 session_start();
 
-// Database Connection
-$servername = "localhost";
-$db_user    = "your_db_user";
-$db_pass    = "your_db_password";
-$db_name    = "your_db_name";
-$conn = @new mysqli($servername, $db_user, $db_pass, $db_name);
+// Database connection ($conn), configured in config.php
+require_once __DIR__ . '/config.php';
 
 $db_connected = true;
 if (!$conn || $conn->connect_error) {
