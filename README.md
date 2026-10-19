@@ -73,12 +73,12 @@ The database schema and seed data are **not included** in this repo, so you need
 1. Install PHP (with the `mysqli` extension) and MySQL.
 2. Create a database and load a schema matching the tables above.
 3. Point the app at your database with the `DB_HOST`, `DB_USER`, `DB_PASSWORD` and `DB_NAME` environment variables, which `config.php` reads. Without them it falls back to placeholder values.
-4. From the repo root, start a PHP server with those variables set: `DB_HOST=127.0.0.1 DB_USER=... DB_PASSWORD=... DB_NAME=... php -S localhost:8000`
+4. From the repo root, start a PHP server with those variables set (plus the demo login variables described below): `DB_HOST=127.0.0.1 DB_USER=... DB_PASSWORD=... DB_NAME=... php -S localhost:8000`
 5. Open `http://localhost:8000/index.php`. The page loads Chart.js and Plotly from CDNs, so it needs internet access.
 
-CI (`.github/workflows/ci.yml`) runs `php -l` on every PHP file and `node --check` on `script.js`. It also starts the built-in server with no database and checks that the login page renders and that both handlers return a JSON error.
+CI (`.github/workflows/ci.yml`) runs `php -l` on every PHP file outside `legacy/` and `node --check` on `script.js`. It also starts the built-in server with no database and checks that the login page renders, that both handlers return a JSON error, and that the demo logins work only with the credentials set in the environment.
 
-Login uses one demo account per role, defined in `index.php`. That suits a course demo; a production deployment would add real user management.
+Login uses one demo account per role. Set its credentials through environment variables, alongside the `DB_*` ones: `DEMO_SENIOR_USERNAME` / `DEMO_SENIOR_PASSWORD` for the Senior Manager dashboard and `DEMO_SCM_USERNAME` / `DEMO_SCM_PASSWORD` for the Supply Chain Manager dashboard. A role with no credentials set can't log in. That suits a course demo; a production deployment would add real user management.
 
 ## Team
 

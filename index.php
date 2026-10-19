@@ -19,18 +19,24 @@ if ($page === 'do_login') {
     $username = isset($_POST['username']) ? trim($_POST['username']) : '';
     $password = isset($_POST['password']) ? trim($_POST['password']) : '';
 
-    // USERNAMES & PASSWORDS
-    if ($username === 'managerL?P35!' && $password === '91649cbwoy24?@') {
-        $_SESSION['role'] = 'senior';
-        $_SESSION['username'] = 'manager';
-        header("Location: index.php?page=erp");
-        exit();
-    }
-    if ($username === 'supply64198!' && $password === '3kfehTrwE2@s') {
-        $_SESSION['role'] = 'scm';
-        $_SESSION['username'] = 'supply';
-        header("Location: index.php?page=scm");
-        exit();
+    // One demo account per role, configured through environment variables so no
+    // credentials live in the repo. A role whose variables are unset can't log in.
+    $demo_accounts = [
+        'senior' => ['env' => 'DEMO_SENIOR', 'username' => 'manager', 'page' => 'erp'],
+        'scm'    => ['env' => 'DEMO_SCM',    'username' => 'supply',  'page' => 'scm'],
+    ];
+    foreach ($demo_accounts as $account_role => $account) {
+        $expected_user = (string) getenv($account['env'] . '_USERNAME');
+        $expected_pass = (string) getenv($account['env'] . '_PASSWORD');
+        if ($expected_user === '' || $expected_pass === '') {
+            continue;
+        }
+        if (hash_equals($expected_user, $username) && hash_equals($expected_pass, $password)) {
+            $_SESSION['role'] = $account_role;
+            $_SESSION['username'] = $account['username'];
+            header("Location: index.php?page=" . $account['page']);
+            exit();
+        }
     }
 
     header("Location: index.php?page=login&error=1");
@@ -141,7 +147,7 @@ if ($page === 'company_search' && $role !== 'scm') {
 
 <?php elseif ($page === 'erp' && $role === 'senior'): ?>
 
-    <!-- SENIOR MANAGER DASHBOARD (manager/123) -->
+    <!-- SENIOR MANAGER DASHBOARD -->
     <div class="card wide">
         <header class="card-header horizontal">
             <div>
@@ -1319,7 +1325,7 @@ window.addEventListener('DOMContentLoaded', function () {
 <!-- SCM CODE -->
 <?php elseif ($page === 'scm' && $role === 'scm'): ?>
 
-    <!-- SUPPLY CHAIN MANAGER DASHBOARD (supply/123) -->
+    <!-- SUPPLY CHAIN MANAGER DASHBOARD -->
     <div class="card wide">
         <header class="card-header horizontal">
             <div>

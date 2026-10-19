@@ -19,6 +19,11 @@ jobs:
       DB_USER: ci
       DB_PASSWORD: ci
       DB_NAME: ci
+      # Throwaway demo logins for the login smoke test below.
+      DEMO_SENIOR_USERNAME: ci-senior
+      DEMO_SENIOR_PASSWORD: ci-senior-pass
+      DEMO_SCM_USERNAME: ci-scm
+      DEMO_SCM_PASSWORD: ci-scm-pass
     steps:
       - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
@@ -60,6 +65,29 @@ jobs:
             echo "$handler: $(cat response.json)"
             jq -e '.success == false' response.json > /dev/null
           done
+
+      - name: Demo logins come from the environment
+        run: |
+          # Print where index.php?page=do_login redirects for a username/password pair.
+          login() {
+            curl -s -o /dev/null -w '%{redirect_url}' -X POST \
+              --data-urlencode "username=$2" --data-urlencode "password=$3" \
+              "http://127.0.0.1:$1/index.php?page=do_login"
+          }
+          expect() {
+            echo "$1 -> $2"
+            case "$2" in *"$3") ;; *) echo "expected a redirect ending in $3"; exit 1 ;; esac
+          }
+          expect "senior login" "$(login 8000 "$DEMO_SENIOR_USERNAME" "$DEMO_SENIOR_PASSWORD")" "page=erp"
+          expect "scm login" "$(login 8000 "$DEMO_SCM_USERNAME" "$DEMO_SCM_PASSWORD")" "page=scm"
+          expect "wrong password" "$(login 8000 "$DEMO_SENIOR_USERNAME" wrong)" "page=login&error=1"
+          expect "empty credentials" "$(login 8000 "" "")" "page=login&error=1"
+
+          # With no DEMO_* variables at all, even empty credentials must be refused.
+          env -u DEMO_SENIOR_USERNAME -u DEMO_SENIOR_PASSWORD -u DEMO_SCM_USERNAME -u DEMO_SCM_PASSWORD \
+            php -S 127.0.0.1:8001 > php-server-no-logins.log 2>&1 &
+          for _ in $(seq 1 20); do curl -s -o /dev/null http://127.0.0.1:8001/index.php && break; sleep 0.5; done
+          expect "unset accounts, empty credentials" "$(login 8001 "" "")" "page=login&error=1"
 
       - name: Server log
         if: always()
