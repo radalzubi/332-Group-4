@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: Lint and smoke-test (PHP 8.4)
+    runs-on: ubuntu-latest
+    env:
+      # No database runs in CI: these point at a closed port, so the app's
+      # "database unavailable" paths are what gets exercised.
+      DB_HOST: 127.0.0.1
+      DB_USER: ci
+      DB_PASSWORD: ci
+      DB_NAME: ci
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mysqli
+          coverage: none
+
+      - name: Lint PHP
+        run: find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+
+      - name: Check script.js syntax
+        run: node --check script.js
+
+      - name: Start the PHP built-in server
+        run: |
+          php -d output_buffering=0 -d display_errors=1 -S 127.0.0.1:8000 > php-server.log 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -s -o /dev/null http://127.0.0.1:8000/index.php && exit 0
+            sleep 0.5
+          done
+          cat php-server.log
+          exit 1
+
+      - name: Login page renders without a database
+        run: |
+          status=$(curl -s -o login.html -w '%{http_code}' http://127.0.0.1:8000/index.php)
+          echo "HTTP $status"
+          test "$status" = 200
+          grep -q 'id="login-form"' login.html
+          if grep -E 'Fatal error|Warning:|Uncaught' login.html; then exit 1; fi
+
+      - name: Handlers return a JSON error without a database
+        run: |
+          for handler in ajax_handler_senior_managers.php ajax_handler_supply_chain_managers.php; do
+            curl -s -X POST -d action=get_network_overview "http://127.0.0.1:8000/$handler" > response.json
+            echo "$handler: $(cat response.json)"
+            jq -e '.success == false' response.json > /dev/null
+          done
+
+      - name: Server log
+        if: always()
+        run: cat php-server.log
