@@ -1,5 +1,20 @@
 # Group 4 ERP System
 
+[![CI](https://github.com/radalzubi/332-Group-4/actions/workflows/ci.yml/badge.svg)](https://github.com/radalzubi/332-Group-4/actions/workflows/ci.yml)
+
+**A course-built ERP interface for investigating supply-chain disruptions and company performance.**
+
+Software implementation and project leadership by [Rad AlZubi](https://github.com/radalzubi). Developed within Purdue IE 332's six-person Group 4; the course-team roster and existing SQL/source credits are retained below.
+
+**Implemented:** manager dashboards, company/dependency lookups, disruption metrics, financial views and update forms using PHP, MySQL and JavaScript.
+
+**Stage:** academic project. The database schema and seed data are not included, and the demo authentication is not production user management. CI covers syntax and a limited smoke flow.
+
+**Start here:** [application](index.php) · [senior-manager API](ajax_handler_senior_managers.php) · [team progress notes](A3%20Documentation.txt)
+
+---
+
+
 A role-based supply chain ERP web app built by a team of six for Purdue's IE 332 (ERP/SCM systems) course. Users log in as either a **Senior Manager** or a **Supply Chain Manager** and get a dashboard over a relational model of companies, supply dependencies, shipments, financial reports and disruption events. The app is a PHP/MySQL back end that serves JSON to a vanilla JavaScript front end rendered with Chart.js and Plotly.
 
 ## Features
